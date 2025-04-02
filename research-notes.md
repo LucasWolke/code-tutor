@@ -3,13 +3,15 @@
 ## Key Takeaways
 
 - Focus on scaffolded guidance (step-by-step help that builds understanding) instead of long detailed response that solves entire problem.
-- Use interactive support like Socratic questioning (open ended questions to encourage thinking about problem) and clarifying prompts to engage students.
-- Integration into workflow, i.e LLM directly in IDE is really important.
+- Use interactive support like Socratic questioning (open ended questions to encourage thinking about problem) to engage students.
+- Integration into workflow, i.e LLM directly in IDE is really important for engagement.
 - Provide explanations and pseudocode, not just full code solutions.
-- Add guardrails to stop students from cheating system/learning wrong patterns like poor/very short prompts.
-- Adaptive feedback based on student skills, behavior and query quality.
+- Add guardrails to stop students from cheating/learning wrong patterns like poor/very short prompts.
+- Adaptive feedback based on student skills, behavior and query quality(?).
 - Find balance between providing enough help (so students actually use it) and not doing the heavy lifting for students.
 - Non goal?: Although many papers focus on teaching LLMs (learn how to prompt better, how to work with LLMs), the goal of code tutor is to help students learn programming, not to learn how to use LLMs
+
+## Papers
 
 ### Beyond Traditional Teaching: Large Language Models as Simulated Teaching Assistants in Computer Science
 
@@ -77,5 +79,24 @@
 - Most queries were debugging/implementation help, not conceptual understanding - many were low-effort
 - Found positive correlation between usage and final course performance
 - Suggests importance of teaching students how to ask good questions, possibly using automated scaffolding
-- LLMs **with guardrails** can support learning without leading to over-reliance/cheating
+- LLMs with guardrails can support learning without leading to over-reliance/cheating
 - Idea: Query analysis to adaptively coach students on asking better questions?
+
+### Using an LLM to Help With Code Understanding
+
+- GPT-3.5, GILT, CS1, IDE-integrated
+- GILT is an IDE-integrated LLM tool (GPT-3.5) designed to help developers understand unfamiliar code via prompt-less and prompt-based interactions
+- Offers features like code summaries, domain concept help, and usage examples
+- Improved task completion rate compared to web search, but did not improve speed or deep understanding
+- Professionals benefited more than students, likely due to better prompt engineering skills
+- Prompt-less interactions (buttons) helped students more, suggesting value in reducing prompt-writing demands
+- Preference over web search because of usability and usefulness, context-aware answers are important
+- Risk: Some outsource comprehension to LLMs, need for guardrails
+
+## Architecture
+
+### Open questions
+
+- Open Source model vs API
+  - Is using an API really more expensive? GPT-3.5-turbo: 500 Students x 100 queries x 0.003€ = 150€ for a semester
+  - Renting a server for 1 month 24/7, 1€ per hour = 700€ for a month, but way more complicated setup
