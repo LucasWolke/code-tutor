@@ -6,5 +6,6 @@
 | 17.03    | Meeting, discuss idea and next steps                    | 2     |
 | 26.03    | Repo setup, search papers                               | 2     |
 | 31-02.04 | Research papers and open source llm hosting             | 4     |
+| 03.04    | Meeting, discuss research, architecture, goals          | 1     |
 
-**Total hours: 11**
+**Total hours: 12**
