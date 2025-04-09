@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+  java-lsp-server:
+    build:
+      context: ./java-lsp-server
+      dockerfile: Dockerfile
+    ports:
+      - "30003:30003"
+    volumes:
+      - ./workspace:/app/workspace
+    environment:
+      - JDTLS_BASE_PATH=/app
