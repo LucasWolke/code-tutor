@@ -1,0 +1,44 @@
+{
+    "name": "code-tutor",
+    "version": "0.1.0",
+    "description": "Java Web IDE with AI support",
+    "private": true,
+    "scripts": {
+        "dev:frontend": "cd frontend && npm run dev",
+        "build:frontend": "cd frontend && npm run build",
+        "build:backend": "cd backend && npm run build",
+        "build": "npm run build:frontend && npm run build:backend",
+        "start:frontend": "cd frontend && npm run start",
+        "start:backend": "cd backend && npm run start:services",
+        "start:lsp": "cd backend/lsp && docker-compose up -d",
+        "start:sandbox": "cd backend/sandbox && docker-compose up -d",
+        "start:services": "concurrently \"npm run start:lsp\" \"npm run start:sandbox\"",
+        "start": "concurrently \"npm run dev:frontend\" \"npm run start:services\"",
+        "stop:services": "cd backend/lsp && docker-compose down && cd ../sandbox && docker-compose down",
+        "stop": "npm run stop:services"
+    },
+    "keywords": [
+        "java",
+        "ide",
+        "monaco",
+        "lsp",
+        "ai"
+    ],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@shikijs/monaco": "^3.2.1",
+        "concurrently": "^8.2.2"
+    },
+    "dependencies": {
+        "@codingame/monaco-vscode-languages-service-override": "^15.0.3",
+        "@codingame/monaco-vscode-python-default-extension": "^15.0.3",
+        "@codingame/monaco-vscode-textmate-service-override": "^15.0.3",
+        "@codingame/monaco-vscode-theme-defaults-default-extension": "^15.0.3",
+        "@codingame/monaco-vscode-theme-service-override": "^15.0.3",
+        "monaco-editor": "^0.36.1",
+        "monaco-languageclient": "^5.0.1",
+        "shiki": "^3.2.1",
+        "vscode": "npm:@codingame/monaco-vscode-api@~1.76.6"
+    }
+}
