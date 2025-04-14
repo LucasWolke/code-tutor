@@ -5,8 +5,17 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { v4: uuidv4 } = require('uuid');
+const cors = require('cors');
 
 const app = express();
+
+// Configure CORS to allow requests from the frontend
+app.use(cors({
+  origin: ['http://localhost:3000', 'https://code-tutor.vercel.app'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
 // Helper: Execute a command with a timeout.
@@ -71,7 +80,7 @@ app.post('/execute', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = 3001;
 app.listen(PORT, () => {
-  console.log(`Java sandbox server listening on port ${PORT}`);
+  console.log(`Server is running on http://localhost:${PORT}`);
 });

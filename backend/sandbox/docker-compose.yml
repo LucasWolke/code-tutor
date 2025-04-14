@@ -1,11 +1,11 @@
 # docker-compose.yml
-version: '3.8'
+version: "3.8"
 
 services:
   sandbox:
     build: .
     ports:
-      - "3000:3000"
+      - "3001:3001"
     deploy:
       resources:
         limits:

@@ -19,7 +19,7 @@ RUN npm install --production
 COPY sandbox.js .
 
 # Expose the port used by the server
-EXPOSE 3000
+EXPOSE 3001
 
 # Start the sandbox server
 CMD [ "node", "sandbox.js" ]
