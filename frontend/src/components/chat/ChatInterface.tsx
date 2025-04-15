@@ -1,157 +1,124 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { SendIcon, PlusIcon, LoaderIcon, XCircleIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+"use client";
 
-export interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant" | "system";
-  timestamp: Date;
-  isLoading?: boolean;
-}
+import { useState, useRef, useEffect } from "react";
+import { aiService } from "@/lib/services/ai/aiService";
+import { ChatMessage } from "@/lib/services/ai/types";
+import { useEditorStore } from "@/lib/stores/editorStore";
 
-interface ChatInterfaceProps {
-  initialPrompt?: string;
-  onSendMessage: (message: string) => Promise<void>;
-  messages: Message[];
-  isProcessing: boolean;
-  onReset: () => void;
-  className?: string;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  initialPrompt = "",
-  onSendMessage,
-  messages,
-  isProcessing,
-  onReset,
-  className,
-}) => {
-  const [input, setInput] = useState(initialPrompt);
+export function ChatInterface() {
+  const { code } = useEditorStore();
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      role: "assistant",
+      content:
+        "Hello! I'm your coding assistant. How can I help you with your Java code?",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Auto-resize the textarea as content grows
-  useEffect(() => {
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
-    }
-  }, [input]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || isProcessing) return;
+    if (!input.trim() || isLoading) return;
 
-    await onSendMessage(input.trim());
+    // Add user message to chat
+    const userMessage: ChatMessage = {
+      role: "user",
+      content: input,
+    };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
+    setIsLoading(true);
 
-    // Reset the textarea height
-    if (inputRef.current) {
-      inputRef.current.style.height = "auto";
-    }
-  };
+    try {
+      // Generate response with current prompt
+      const prompt = input;
+      const response = await aiService.generateResponse(prompt, code);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Submit on Ctrl+Enter or Cmd+Enter
-    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
-      e.preventDefault();
-      handleSubmit(e);
+      // Add AI response to chat
+      const assistantMessage: ChatMessage = {
+        role: "assistant",
+        content: response,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage: ChatMessage = {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again later.",
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+      console.error("AI chat error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className={cn("flex flex-col h-full border rounded-md", className)}>
-      <div className="flex justify-between items-center p-3 border-b bg-gray-50">
-        <h3 className="font-medium">AI Assistant</h3>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onReset}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <PlusIcon size={16} className="mr-1" />
-          New Chat
-        </Button>
+    <div className="flex font-jetbrains-mono flex-col h-full bg-gray-900 border-l border-gray-700 overflow-hidden">
+      <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-3 border-b border-gray-700">
+        <span className="mr-2">AI Tutor</span>
       </div>
 
+      {/* Messages container */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 ? (
-          <div className="text-center text-gray-500 py-8">
-            <p>Ask the AI assistant for help with your Java code.</p>
-            <p className="text-sm mt-2">
-              Try: "Explain this code" or "Help me fix the errors"
-            </p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={cn(
-                "p-3 rounded-lg max-w-[85%]",
-                message.role === "user" ? "bg-blue-100 ml-auto" : "bg-gray-100",
-                message.isLoading && "opacity-70"
-              )}
-            >
-              <div className="flex items-center mb-1">
-                <span className="font-medium text-xs text-gray-700">
-                  {message.role === "user" ? "You" : "AI Assistant"}
-                </span>
-                <span className="text-xs text-gray-500 ml-2">
-                  {message.timestamp.toLocaleTimeString()}
-                </span>
-              </div>
-              <div className="whitespace-pre-wrap">
-                {message.content}
-                {message.isLoading && (
-                  <LoaderIcon
-                    className="inline-block ml-2 animate-spin"
-                    size={14}
-                  />
-                )}
-              </div>
+        {messages.map((message, index) => (
+          <div
+            key={index}
+            className={`${
+              message.role === "user" ? "bg-gray-800" : "bg-gray-700"
+            } rounded-lg p-3 text-white break-words`}
+          >
+            <div className="text-xs text-gray-400 mb-1">
+              {message.role === "user" ? "You" : "Assistant"}:
             </div>
-          ))
+            <div className="whitespace-pre-wrap">{message.content}</div>
+          </div>
+        ))}
+        {isLoading && (
+          <div className="bg-gray-700 rounded-lg p-3 text-white">
+            <div className="text-xs text-gray-400 mb-1">Assistant:</div>
+            <div className="flex items-center space-x-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
+            </div>
+          </div>
         )}
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSubmit} className="border-t p-3">
-        <div className="flex items-end">
-          <textarea
-            ref={inputRef}
+      {/* Input form */}
+      <form
+        onSubmit={handleSubmit}
+        className="border-t border-gray-700 p-4 bg-gray-800"
+      >
+        <div className="flex space-x-2">
+          <input
+            type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Ask for help with your code..."
-            className="flex-1 resize-none border rounded-md p-2 focus:outline-none focus:ring-1 focus:ring-blue-500 min-h-[42px] max-h-[200px]"
-            rows={1}
-            disabled={isProcessing}
+            placeholder="Ask a question..."
+            className="flex-1 bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={isLoading}
           />
-          <Button
+          <button
             type="submit"
-            className="ml-2"
-            disabled={isProcessing || !input.trim()}
+            disabled={isLoading || !input.trim()}
+            className={`bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
+              isLoading || !input.trim() ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
-            {isProcessing ? (
-              <LoaderIcon className="animate-spin" size={18} />
-            ) : (
-              <SendIcon size={18} />
-            )}
-          </Button>
-        </div>
-        <div className="text-xs text-gray-500 mt-1">
-          Press Ctrl+Enter to send
+            Send
+          </button>
         </div>
       </form>
     </div>
   );
-};
-
-export default ChatInterface;
+}

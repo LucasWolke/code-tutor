@@ -1,16 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { editor } from "monaco-editor";
 import * as vscode from "vscode";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { connectToLanguageServer } from "@/lib/language-server";
-import type { MonacoLanguageClient } from "monaco-languageclient";
+import { useCallback, useEffect, useState } from "react";
 import { shikiToMonaco } from "@shikijs/monaco";
 import type { Monaco } from "@monaco-editor/react";
 import { highlighter } from "@/lib/shiki";
-import { executeJavaCode } from "@/lib/services/codeExecutionService";
 import { Terminal } from "@/components/terminal/Terminal";
+import { useEditorStore } from "@/lib/stores/editorStore";
+import { editor } from "monaco-editor";
 
 // Dynamically import Monaco Editor with SSR disabled
 const Editor = dynamic(
@@ -40,121 +38,62 @@ const DefaultEditorOptionConfig = {
 };
 
 export function JavaEditor() {
-  // Local state
+  // Client-side hydration check
   const [hydrated, setHydrated] = useState(false);
-  const [editorInstance, setEditorInstance] =
-    useState<editor.IStandaloneCodeEditor | null>(null);
-  const [markers, setMarkers] = useState<editor.IMarker[]>([]);
-  const [webSocket, setWebSocket] = useState<WebSocket | null>(null);
-  const [terminalOutput, setTerminalOutput] = useState<string>("");
-  const [isExecuting, setIsExecuting] = useState<boolean>(false);
-  const [value, setValue] = useState<string>(`public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello World!");
-    }
-}`);
 
-  // Fixed Java configuration
+  // Get everything from the store
+  const {
+    code,
+    setEditorInstance,
+    executeCode,
+    isExecuting,
+    terminalOutput,
+    disconnectLsp,
+  } = useEditorStore();
+
+  // Java configuration
   const lang = "java";
   const path = vscode.Uri.file(`app/workspace/hello.java`);
-
-  const monacoLanguageClientRef = useRef<MonacoLanguageClient | null>(null);
 
   const handleEditorWillMount = useCallback((monaco: Monaco) => {
     shikiToMonaco(highlighter, monaco);
   }, []);
 
-  // Set hydrated state on component mount
+  // Mark as hydrated when component mounts
   useEffect(() => {
     setHydrated(true);
-  }, []);
 
-  // Connect to LSP
-  const connectLSP = useCallback(async () => {
-    if (!editorInstance) return;
-
-    // If there's an existing language client, stop it first
-    if (monacoLanguageClientRef.current) {
-      monacoLanguageClientRef.current.stop();
-      monacoLanguageClientRef.current = null;
-      setWebSocket(null);
-    }
-
-    // Create a new language client
-    try {
-      const { client: monacoLanguageClient, webSocket: ws } =
-        await connectToLanguageServer();
-      monacoLanguageClientRef.current = monacoLanguageClient;
-      setWebSocket(ws);
-    } catch (error) {
-      console.error("Failed to connect to LSP:", error);
-    }
-  }, [editorInstance]);
-
-  // Reconnect to the LSP whenever editor changes
-  useEffect(() => {
-    connectLSP();
-  }, [connectLSP]);
-
-  // Cleanup the LSP connection when the component unmounts
-  useEffect(() => {
+    // Cleanup LSP connection on unmount
     return () => {
-      if (monacoLanguageClientRef.current) {
-        monacoLanguageClientRef.current.stop();
-        monacoLanguageClientRef.current = null;
-        setWebSocket(null);
-      }
+      disconnectLsp();
     };
-  }, []);
+  }, [disconnectLsp]);
 
-  const handleOnMount = useCallback(
-    async (editor: editor.IStandaloneCodeEditor) => {
-      setEditorInstance(editor);
-
-      // Update value whenever content changes
-      editor.onDidChangeModelContent(() => {
-        setValue(editor.getValue());
-      });
+  // Editor mount handler - store the instance
+  const handleEditorMount = useCallback(
+    (editorInstance: editor.IStandaloneCodeEditor) => {
+      setEditorInstance(editorInstance);
     },
-    []
+    [setEditorInstance]
   );
 
-  // Handle code execution
-  const handleExecuteCode = async () => {
-    if (!editorInstance) return;
-
-    try {
-      setIsExecuting(true);
-      setTerminalOutput("");
-
-      const code = editorInstance.getValue();
-      const result = await executeJavaCode(code);
-
-      setTerminalOutput(result.output);
-    } catch (error) {
-      setTerminalOutput(
-        `Error executing code: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    } finally {
-      setIsExecuting(false);
-    }
-  };
-
   if (!hydrated) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-full">
+        Loading editor...
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
-        <span className="mr-2">Editor</span>
+        <span className="mr-2">Java Editor</span>
         <button
-          onClick={handleExecuteCode}
+          onClick={executeCode}
           disabled={isExecuting}
           className={`bg-green-600 hover:bg-green-700 text-white py-1 px-4 rounded flex items-center transition-colors ${
-            isExecuting ? "opacity-50 cursor-not-allowed" : ""
+            isExecuting ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
           }`}
         >
           {isExecuting ? (
@@ -192,8 +131,8 @@ export function JavaEditor() {
           language={lang}
           theme="houston"
           path={path.toString()}
-          value={value}
-          onMount={handleOnMount}
+          value={code}
+          onMount={handleEditorMount}
           options={DefaultEditorOptionConfig}
           beforeMount={handleEditorWillMount}
           loading={<div>Loading...</div>}

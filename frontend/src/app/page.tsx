@@ -1,4 +1,5 @@
 import { JavaEditor } from "@/components/editor/Editor";
+import { ChatInterface } from "@/components/chat/ChatInterface";
 
 export default function Home() {
   return (
@@ -22,9 +23,17 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <JavaEditor />
+      {/* Main content - Split view with Editor and Chat */}
+      <main className="flex-1 overflow-hidden flex">
+        {/* Editor section - 70% width */}
+        <div className="w-[70%] h-full overflow-hidden">
+          <JavaEditor />
+        </div>
+
+        {/* Chat interface - 30% width */}
+        <div className="w-[30%] h-full overflow-hidden">
+          <ChatInterface />
+        </div>
       </main>
 
       {/* Footer */}
