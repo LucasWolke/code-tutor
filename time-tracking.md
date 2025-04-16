@@ -11,5 +11,6 @@
 | 5-9.04   | Implement first prototype of editor, lsp and sandbox    | 15    |
 | 14.04    | Research ai pipeline                                    | 2     |
 | 14-15.04 | Implement sandbox + ai chat in ide, refactor frontend   | 8     |
+| 16.04    | Meeting, discuss progress, ai pipeline, logging         | 1     |
 
-**Total hours: 40**
+**Total hours: 41**

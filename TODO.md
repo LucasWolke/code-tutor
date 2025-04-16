@@ -12,4 +12,8 @@
 - [x] Build a prototype to test techstack
 - [x] Create basic concept based on research
 - [] Implement and test the AI pipeline
+- [] Update documentation (README, UML Diagrams)
+- [] Research deployment options (Scalability + How to host containerized backend, Kubernetes?)
+- [] Research logging (educational data mining) -> think about how to test the app (with tutors?)
+
 - [] Update UI/UX
