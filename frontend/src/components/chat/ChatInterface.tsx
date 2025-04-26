@@ -1,22 +1,50 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { aiService } from "@/lib/services/ai/aiService";
+import { aiService, generateResponse } from "@/lib/services/ai/aiService";
 import { ChatMessage } from "@/lib/services/ai/types";
 import { useEditorStore } from "@/lib/stores/editorStore";
+import { HelpLevel } from "@/lib/langchain/types";
+import { v4 as uuidv4 } from "uuid";
+
+// Map help levels to descriptive names
+const helpLevelNames = {
+  [HelpLevel.MinimalHints]: "Minimal Hints",
+  [HelpLevel.LightCoaching]: "Light Coaching",
+  [HelpLevel.MediumInstruction]: "Medium Instruction",
+  [HelpLevel.DetailedDebugging]: "Detailed Debugging",
+  [HelpLevel.FullSolution]: "Full Solution",
+};
+
+// Enhanced chat message with help level
+interface EnhancedChatMessage extends ChatMessage {
+  helpLevel?: HelpLevel;
+  isLoading?: boolean;
+}
 
 export function ChatInterface() {
   const { code } = useEditorStore();
-  const [messages, setMessages] = useState<ChatMessage[]>([
+  const [messages, setMessages] = useState<EnhancedChatMessage[]>([
     {
       role: "assistant",
       content:
-        "Hello! I'm your coding assistant. How can I help you with your Java code?",
+        "Hello! I'm your Java coding tutor. How can I help you today? I can provide assistance at different levels based on your needs.",
     },
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionId] = useState(() => uuidv4());
+  const [userId] = useState(() => "user-" + uuidv4().substring(0, 8));
+  const [selectedHelpLevel, setSelectedHelpLevel] = useState<
+    HelpLevel | undefined
+  >(undefined);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize the session when component mounts
+  useEffect(() => {
+    aiService.setSessionId(sessionId);
+    aiService.setUserId(userId);
+  }, [sessionId, userId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -28,7 +56,7 @@ export function ChatInterface() {
     if (!input.trim() || isLoading) return;
 
     // Add user message to chat
-    const userMessage: ChatMessage = {
+    const userMessage: EnhancedChatMessage = {
       role: "user",
       content: input,
     };
@@ -36,24 +64,49 @@ export function ChatInterface() {
     setInput("");
     setIsLoading(true);
 
-    try {
-      // Generate response with current prompt
-      const prompt = input;
-      const response = await aiService.generateResponse(prompt, code);
+    // Add loading placeholder message
+    const loadingMessage: EnhancedChatMessage = {
+      role: "assistant",
+      content: "Thinking...",
+      isLoading: true,
+    };
 
-      // Add AI response to chat
-      const assistantMessage: ChatMessage = {
-        role: "assistant",
-        content: response,
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+    setMessages((prev) => [...prev, loadingMessage]);
+
+    try {
+      // Use non-streaming response
+      const response = await generateResponse(input, code, {
+        helpLevel: selectedHelpLevel,
+      });
+
+      // Replace loading message with response
+      setMessages((prevMessages) => {
+        const messagesWithoutLoading = prevMessages.filter(
+          (msg) => !msg.isLoading
+        );
+        return [
+          ...messagesWithoutLoading,
+          {
+            role: "assistant",
+            content: response.text,
+            helpLevel: response.helpLevel,
+          },
+        ];
+      });
     } catch (error) {
-      // Add error message
-      const errorMessage: ChatMessage = {
-        role: "assistant",
-        content: "Sorry, I encountered an error. Please try again later.",
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      // Handle error
+      setMessages((prevMessages) => {
+        const messagesWithoutLoading = prevMessages.filter(
+          (msg) => !msg.isLoading
+        );
+        return [
+          ...messagesWithoutLoading,
+          {
+            role: "assistant",
+            content: "Sorry, I encountered an error. Please try again later.",
+          },
+        ];
+      });
       console.error("AI chat error:", error);
     } finally {
       setIsLoading(false);
@@ -64,6 +117,39 @@ export function ChatInterface() {
     <div className="flex font-jetbrains-mono flex-col h-full bg-gray-900 border-l border-gray-700 overflow-hidden">
       <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-3 border-b border-gray-700">
         <span className="mr-2">AI Tutor</span>
+        <div className="flex items-center space-x-2">
+          <label htmlFor="helpLevel" className="text-sm text-gray-300">
+            Help Level:
+          </label>
+          <select
+            id="helpLevel"
+            className="bg-gray-700 border border-gray-600 rounded-md px-2 py-1 text-sm text-white"
+            value={selectedHelpLevel || ""}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSelectedHelpLevel(
+                value ? (parseInt(value) as HelpLevel) : undefined
+              );
+            }}
+          >
+            <option value="">Auto-detect</option>
+            <option value={HelpLevel.MinimalHints}>
+              {helpLevelNames[HelpLevel.MinimalHints]}
+            </option>
+            <option value={HelpLevel.LightCoaching}>
+              {helpLevelNames[HelpLevel.LightCoaching]}
+            </option>
+            <option value={HelpLevel.MediumInstruction}>
+              {helpLevelNames[HelpLevel.MediumInstruction]}
+            </option>
+            <option value={HelpLevel.DetailedDebugging}>
+              {helpLevelNames[HelpLevel.DetailedDebugging]}
+            </option>
+            <option value={HelpLevel.FullSolution}>
+              {helpLevelNames[HelpLevel.FullSolution]}
+            </option>
+          </select>
+        </div>
       </div>
 
       {/* Messages container */}
@@ -75,22 +161,30 @@ export function ChatInterface() {
               message.role === "user" ? "bg-gray-800" : "bg-gray-700"
             } rounded-lg p-3 text-white break-words`}
           >
-            <div className="text-xs text-gray-400 mb-1">
-              {message.role === "user" ? "You" : "Assistant"}:
+            <div className="text-xs text-gray-400 mb-1 flex justify-between items-center">
+              <span>{message.role === "user" ? "You" : "Assistant"}</span>
+              {message.helpLevel && (
+                <span className="px-2 py-0.5 bg-blue-600 rounded-full text-xs">
+                  {helpLevelNames[message.helpLevel]}
+                </span>
+              )}
             </div>
-            <div className="whitespace-pre-wrap">{message.content}</div>
+            <div className="whitespace-pre-wrap">
+              {message.isLoading ? (
+                <>
+                  {message.content}
+                  <div className="flex items-center space-x-2 mt-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
+                  </div>
+                </>
+              ) : (
+                message.content
+              )}
+            </div>
           </div>
         ))}
-        {isLoading && (
-          <div className="bg-gray-700 rounded-lg p-3 text-white">
-            <div className="text-xs text-gray-400 mb-1">Assistant:</div>
-            <div className="flex items-center space-x-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-100"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-200"></div>
-            </div>
-          </div>
-        )}
         <div ref={messagesEndRef} />
       </div>
 
