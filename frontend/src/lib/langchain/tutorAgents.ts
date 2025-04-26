@@ -1,0 +1,167 @@
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
+import { HelpLevel, TutorContext } from "./types";
+import { StringOutputParser } from "@langchain/core/output_parsers";
+import {
+    HELP_LEVEL_ASSESSOR_PROMPT,
+    TUTOR_PROMPTS,
+    CONTEXT_SUMMARY_PROMPT,
+    createConsistencyCheckerPrompt
+} from "./prompts";
+
+// Create a single Google Generative AI instance to be reused
+const defaultModel = new ChatGoogleGenerativeAI({
+    model: "gemini-2.0-flash",
+    temperature: 0.3
+});
+
+// Higher quality model for level assessment
+const assessorModel = new ChatGoogleGenerativeAI({
+    model: "gemini-2.0-flash",
+    temperature: 0
+});
+
+/**
+ * Level Assessor: Analyzes user message and code to determine appropriate help level
+ */
+export async function assessHelpLevel(context: Omit<TutorContext, "helpLevel">): Promise<HelpLevel> {
+    const assessorPrompt = ChatPromptTemplate.fromTemplate(HELP_LEVEL_ASSESSOR_PROMPT);
+    const assessorChain = assessorPrompt.pipe(assessorModel).pipe(new StringOutputParser());
+
+    const response = await assessorChain.invoke({
+        code: context.code,
+        userMessage: context.userMessage,
+    });
+
+    // Extract the help level from response (should be a single number)
+    const levelMatch = response.match(/[1-5]/);
+    return levelMatch ? parseInt(levelMatch[0], 10) as HelpLevel : HelpLevel.MediumInstruction;
+}
+
+/**
+ * Format chat history into a readable string
+ */
+function formatChatHistory(chatHistory: any[]): string {
+    if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
+        return "No prior conversation.";
+    }
+
+    return chatHistory
+        .map(msg => {
+            const role = msg.type || msg.role || "unknown";
+            const content = msg.content || msg.text || "";
+            return `${role}: ${content}`;
+        })
+        .join("\n");
+}
+
+/**
+ * Creates a tutor agent for a specific help level
+ */
+function createTutorAgent(helpLevel: HelpLevel) {
+    const tutorModel = new ChatGoogleGenerativeAI({
+        model: "gemini-2.0-flash",
+        temperature: getTutorTemperatureForLevel(helpLevel),
+    });
+
+    return ChatPromptTemplate.fromTemplate(TUTOR_PROMPTS[helpLevel])
+        .pipe(tutorModel)
+        .pipe(new StringOutputParser());
+}
+
+/**
+ * Get appropriate temperature setting for each help level
+ */
+function getTutorTemperatureForLevel(helpLevel: HelpLevel): number {
+    switch (helpLevel) {
+        case HelpLevel.MinimalHints:
+            return 0.2;
+        case HelpLevel.LightCoaching:
+            return 0.3;
+        case HelpLevel.MediumInstruction:
+            return 0.4;
+        case HelpLevel.DetailedDebugging:
+            return 0.3;
+        case HelpLevel.FullSolution:
+            return 0.2;
+        default:
+            return 0.3;
+    }
+}
+
+/**
+ * Creates a router chain that delegates to the appropriate tutor agent based on help level
+ */
+export async function createTutorRouterChain() {
+    return {
+        invoke: async function (context: TutorContext) {
+            // Ensure the context has all required properties
+            if (!context || !context.userMessage) {
+                throw new Error("Invalid context provided to tutor router");
+            }
+
+            // Format chat history if it exists
+            const formattedHistory = formatChatHistory(context.chat_history || []);
+
+            // Select the appropriate agent based on the help level
+            const helpLevel = context.helpLevel || HelpLevel.MediumInstruction;
+            const agent = createTutorAgent(helpLevel);
+
+            // Invoke the agent with the properly formatted context
+            const response = await agent.invoke({
+                code: context.code,
+                userMessage: context.userMessage,
+                chat_history: formattedHistory
+            });
+
+            return response;
+        }
+    };
+}
+
+/**
+ * Context Summarizer: Creates summaries of the current tutoring context
+ */
+export async function summarizeContext(context: TutorContext): Promise<string> {
+    const summaryPrompt = ChatPromptTemplate.fromTemplate(CONTEXT_SUMMARY_PROMPT);
+
+    const summaryChain = summaryPrompt
+        .pipe(defaultModel)
+        .pipe(new StringOutputParser());
+
+    const response = await summaryChain.invoke({
+        code: context.code,
+        userMessage: context.userMessage,
+    });
+
+    return response;
+}
+
+/**
+ * Consistency Checker: Verifies that the tutor's response matches the assigned help level
+ */
+export async function checkResponseConsistency(
+    response: string,
+    helpLevel: HelpLevel,
+    context: TutorContext
+): Promise<{ isConsistent: boolean, feedback?: string }> {
+    const checkerPrompt = ChatPromptTemplate.fromTemplate(
+        createConsistencyCheckerPrompt(helpLevel)
+    );
+
+    const checkerChain = checkerPrompt
+        .pipe(assessorModel)
+        .pipe(new StringOutputParser());
+
+    const result = await checkerChain.invoke({
+        userQuestion: context.userMessage,
+        tutorResponse: response
+    });
+
+    const isConsistent = result.toLowerCase().includes("yes");
+
+    return {
+        isConsistent,
+        feedback: isConsistent ? undefined : result
+    };
+}
