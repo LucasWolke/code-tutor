@@ -45,6 +45,8 @@
         "@codingame/monaco-vscode-textmate-service-override": "^15.0.3",
         "@codingame/monaco-vscode-theme-defaults-default-extension": "^15.0.3",
         "@codingame/monaco-vscode-theme-service-override": "^15.0.3",
+        "@langchain/google-genai": "^0.2.5",
+        "langchain": "^0.3.24",
         "monaco-editor": "^0.36.1",
         "monaco-languageclient": "^5.0.1",
         "shiki": "^3.2.1",
