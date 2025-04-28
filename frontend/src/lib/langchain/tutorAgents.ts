@@ -8,6 +8,7 @@ import {
     CONTEXT_SUMMARY_PROMPT,
     createConsistencyCheckerPrompt
 } from "./prompts";
+import { getRoleFromMessage } from "./memory";
 
 // Create a single Google Generative AI instance to be reused
 const defaultModel = new ChatGoogleGenerativeAI({
@@ -31,11 +32,14 @@ export async function assessHelpLevel(context: Omit<TutorContext, "helpLevel">):
     const response = await assessorChain.invoke({
         code: context.code,
         userMessage: context.userMessage,
+        chat_history: formatChatHistory(context.chat_history || [])
     });
+
+    console.log("Help level assessment response:", response);
 
     // Extract the help level from response (should be a single number)
     const levelMatch = response.match(/[1-5]/);
-    return levelMatch ? parseInt(levelMatch[0], 10) as HelpLevel : HelpLevel.MediumInstruction;
+    return levelMatch ? parseInt(levelMatch[0], 10) as HelpLevel : HelpLevel.Motivational;
 }
 
 /**
@@ -48,7 +52,8 @@ function formatChatHistory(chatHistory: any[]): string {
 
     return chatHistory
         .map(msg => {
-            const role = msg.type || msg.role || "unknown";
+            const role = getRoleFromMessage(msg);
+            console.log("Message role:", role);
             const content = msg.content || msg.text || "";
             return `${role}: ${content}`;
         })
@@ -61,32 +66,12 @@ function formatChatHistory(chatHistory: any[]): string {
 function createTutorAgent(helpLevel: HelpLevel) {
     const tutorModel = new ChatGoogleGenerativeAI({
         model: "gemini-2.0-flash",
-        temperature: getTutorTemperatureForLevel(helpLevel),
+        temperature: 0.3,
     });
 
     return ChatPromptTemplate.fromTemplate(TUTOR_PROMPTS[helpLevel])
         .pipe(tutorModel)
         .pipe(new StringOutputParser());
-}
-
-/**
- * Get appropriate temperature setting for each help level
- */
-function getTutorTemperatureForLevel(helpLevel: HelpLevel): number {
-    switch (helpLevel) {
-        case HelpLevel.MinimalHints:
-            return 0.2;
-        case HelpLevel.LightCoaching:
-            return 0.3;
-        case HelpLevel.MediumInstruction:
-            return 0.4;
-        case HelpLevel.DetailedDebugging:
-            return 0.3;
-        case HelpLevel.FullSolution:
-            return 0.2;
-        default:
-            return 0.3;
-    }
 }
 
 /**
@@ -104,7 +89,7 @@ export async function createTutorRouterChain() {
             const formattedHistory = formatChatHistory(context.chat_history || []);
 
             // Select the appropriate agent based on the help level
-            const helpLevel = context.helpLevel || HelpLevel.MediumInstruction;
+            const helpLevel = context.helpLevel || HelpLevel.Motivational;
             const agent = createTutorAgent(helpLevel);
 
             // Invoke the agent with the properly formatted context
@@ -157,6 +142,8 @@ export async function checkResponseConsistency(
         userQuestion: context.userMessage,
         tutorResponse: response
     });
+
+    console.log("Consistency check result:", result);
 
     const isConsistent = result.toLowerCase().includes("yes");
 
