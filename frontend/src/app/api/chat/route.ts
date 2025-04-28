@@ -72,10 +72,8 @@ export async function POST(request: Request): Promise<Response> {
             chat_history: chatHistory,
         };
 
-        // Periodically summarize the context (every 5 messages)
+        // Periodically summarize the context
         if (messageCounters[sessionId] % 5 === 0) {
-            await summarizeContext(context);
-            // Check if chat history needs to be summarized to manage token usage
             await summarizeMemoryIfNeeded(sessionId);
         }
 
