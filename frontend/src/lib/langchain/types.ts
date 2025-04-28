@@ -1,21 +1,15 @@
 import { BaseMessage } from "@langchain/core/messages";
 
 /**
- * Help levels for the tutor system
- * 1: Minimal hints
- * 2: Light coaching
- * 3: Medium instruction
- * 4: Detailed debugging
- * 5: Full solution
+ * Help levels for the tutor system, there are 5 levels of help:
  */
 export enum HelpLevel {
-    MinimalHints = 1,
-    LightCoaching = 2,
-    MediumInstruction = 3,
-    DetailedDebugging = 4,
-    FullSolution = 5
+    Motivational = 1,
+    Feedback = 2,
+    GeneralStrategy = 3,
+    ContentStrategy = 4,
+    Contextual = 5
 }
-
 /**
  * Request payload for the chat API
  */

@@ -9,11 +9,20 @@ import { v4 as uuidv4 } from "uuid";
 
 // Map help levels to descriptive names
 const helpLevelNames = {
-  [HelpLevel.MinimalHints]: "Minimal Hints",
-  [HelpLevel.LightCoaching]: "Light Coaching",
-  [HelpLevel.MediumInstruction]: "Medium Instruction",
-  [HelpLevel.DetailedDebugging]: "Detailed Debugging",
-  [HelpLevel.FullSolution]: "Full Solution",
+  [HelpLevel.Motivational]: "Motivational",
+  [HelpLevel.Feedback]: "Feedback",
+  [HelpLevel.GeneralStrategy]: "General Strategy",
+  [HelpLevel.ContentStrategy]: "Content Strategy",
+  [HelpLevel.Contextual]: "Contextual",
+};
+
+// Map help levels to colors
+const helpLevelColors = {
+  [HelpLevel.Motivational]: "bg-purple-600",
+  [HelpLevel.Feedback]: "bg-blue-600",
+  [HelpLevel.GeneralStrategy]: "bg-green-600",
+  [HelpLevel.ContentStrategy]: "bg-yellow-600",
+  [HelpLevel.Contextual]: "bg-red-600",
 };
 
 // Enhanced chat message with help level
@@ -133,20 +142,20 @@ export function ChatInterface() {
             }}
           >
             <option value="">Auto-detect</option>
-            <option value={HelpLevel.MinimalHints}>
-              {helpLevelNames[HelpLevel.MinimalHints]}
+            <option value={HelpLevel.Motivational}>
+              {helpLevelNames[HelpLevel.Motivational]}
             </option>
-            <option value={HelpLevel.LightCoaching}>
-              {helpLevelNames[HelpLevel.LightCoaching]}
+            <option value={HelpLevel.Feedback}>
+              {helpLevelNames[HelpLevel.Feedback]}
             </option>
-            <option value={HelpLevel.MediumInstruction}>
-              {helpLevelNames[HelpLevel.MediumInstruction]}
+            <option value={HelpLevel.GeneralStrategy}>
+              {helpLevelNames[HelpLevel.GeneralStrategy]}
             </option>
-            <option value={HelpLevel.DetailedDebugging}>
-              {helpLevelNames[HelpLevel.DetailedDebugging]}
+            <option value={HelpLevel.ContentStrategy}>
+              {helpLevelNames[HelpLevel.ContentStrategy]}
             </option>
-            <option value={HelpLevel.FullSolution}>
-              {helpLevelNames[HelpLevel.FullSolution]}
+            <option value={HelpLevel.Contextual}>
+              {helpLevelNames[HelpLevel.Contextual]}
             </option>
           </select>
         </div>
@@ -164,7 +173,11 @@ export function ChatInterface() {
             <div className="text-xs text-gray-400 mb-1 flex justify-between items-center">
               <span>{message.role === "user" ? "You" : "Assistant"}</span>
               {message.helpLevel && (
-                <span className="px-2 py-0.5 bg-blue-600 rounded-full text-xs">
+                <span
+                  className={`px-2 py-0.5 ${
+                    helpLevelColors[message.helpLevel]
+                  } rounded-full text-xs text-white`}
+                >
                   {helpLevelNames[message.helpLevel]}
                 </span>
               )}
