@@ -128,7 +128,6 @@ export async function summarizeContext(context: TutorContext): Promise<string> {
 export async function checkResponseConsistency(
     response: string,
     helpLevel: HelpLevel,
-    context: TutorContext
 ): Promise<{ isConsistent: boolean, feedback?: string }> {
     const checkerPrompt = ChatPromptTemplate.fromTemplate(
         createConsistencyCheckerPrompt(helpLevel)
@@ -139,7 +138,6 @@ export async function checkResponseConsistency(
         .pipe(new StringOutputParser());
 
     const result = await checkerChain.invoke({
-        userQuestion: context.userMessage,
         tutorResponse: response
     });
 

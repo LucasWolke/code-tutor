@@ -86,7 +86,6 @@ export async function POST(request: Request): Promise<Response> {
         const consistency = await checkResponseConsistency(
             responseText,
             helpLevel,
-            context
         );
 
         if (!consistency) {

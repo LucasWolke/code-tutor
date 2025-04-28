@@ -285,9 +285,6 @@ export function createConsistencyCheckerPrompt(helpLevel: HelpLevel): string {
     Help level ${helpLevel} is defined as:
     ${helpLevelDescriptions[helpLevel]}
     
-    ## Student question:
-    {userQuestion}
-    
     ## Tutor response:
     {tutorResponse}
     
