@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import {
     assessHelpLevel,
     createTutorRouterChain,
-    summarizeContext,
     checkResponseConsistency
 } from '@/lib/langchain/tutorAgents';
 import {
@@ -62,6 +61,8 @@ export async function POST(request: Request): Promise<Response> {
             userMessage,
         });
 
+        console.log("Help level assessed:", helpLevel);
+
         // Create a context object for the tutor chain
         const context: TutorContext = {
             userId,
@@ -77,22 +78,42 @@ export async function POST(request: Request): Promise<Response> {
             await summarizeMemoryIfNeeded(sessionId);
         }
 
-        // Create router chain to delegate to the appropriate tutor agent
-        const routerChain = await createTutorRouterChain();
-        // Get AI response using our simplified router
-        const responseText = await routerChain.invoke(context);
+        // First attempt
+        let responseText = await generateResponse(context);
+        console.log("Tutor response:", responseText);
 
-        // Check if the response is consistent with the help level
-        const consistency = await checkResponseConsistency(
+        // Comment in code snippet to test consistency check
+        // responseText += "Here is the code snippet you asked for: if (i % 15 == 0) { System.out.println(\'FizzBuzz\'); }"
+
+        // Check consistency
+        let consistency = await checkResponseConsistency(
             responseText,
             helpLevel,
         );
+        console.log("Response consistency check:", consistency);
 
-        if (!consistency) {
-            return NextResponse.json(
-                { error: 'Inconsistent response' },
-                { status: 400 }
+        // If inconsistent, try once more with feedback
+        if (!consistency.isConsistent) {
+            const feedback = consistency.feedback;
+
+            // Second attempt with feedback
+            responseText = await generateResponse(context, feedback);
+            console.log("Retry tutor response:", responseText);
+
+            // Check consistency again
+            consistency = await checkResponseConsistency(
+                responseText,
+                helpLevel,
             );
+            console.log("Retry response consistency check:", consistency);
+
+            // If still not consistent, return error
+            if (!consistency) {
+                return NextResponse.json(
+                    { error: 'Inconsistent response' },
+                    { status: 400 }
+                );
+            }
         }
 
         // Store AI response in memory
@@ -116,4 +137,16 @@ export async function POST(request: Request): Promise<Response> {
             { status: 500 }
         );
     }
+}
+
+// Helper function to generate response with the tutor chain
+async function generateResponse(ctx: TutorContext, feedbackForRetry?: string): Promise<string> {
+    const routerChain = await createTutorRouterChain();
+
+    // If this is a retry, include feedback in the context
+    const contextWithFeedback = feedbackForRetry
+        ? { ...ctx, feedbackForRetry }
+        : ctx;
+
+    return routerChain.invoke(contextWithFeedback);
 }
