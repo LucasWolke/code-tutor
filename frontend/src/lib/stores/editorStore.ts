@@ -3,6 +3,9 @@ import type { editor } from 'monaco-editor';
 import { executeJavaCode } from '@/lib/services/codeExecutionService';
 import { connectToLanguageServer, disconnectLanguageServer } from '@/lib/services/languageServerService';
 import type { MonacoLanguageClient } from 'monaco-languageclient';
+import { aiService } from '@/lib/services/ai/aiService';
+import { ModelConfig } from '@/lib/config/models';
+import { EditorTheme, editorThemes } from '@/lib/config/themes';
 
 interface EditorState {
     // Editor content
@@ -23,12 +26,40 @@ interface EditorState {
     isExecuting: boolean;
     terminalOutput: string;
     executeCode: () => Promise<void>;
+
+    // AI model preferences
+    selectedModelId: string;
+    availableModels: ModelConfig[];
+    setSelectedModel: (modelId: string) => void;
+    getSelectedModel: () => ModelConfig;
+
+    // Editor theme
+    selectedTheme: EditorTheme;
+    availableThemes: EditorTheme[];
+    setSelectedTheme: (themeId: string) => void;
+
+    // Settings modal
+    isSettingsOpen: boolean;
+    setSettingsOpen: (isOpen: boolean) => void;
 }
 
 // Initial Java code template
 const DEFAULT_JAVA_CODE = `public class Main {
     public static void main(String[] args) {
-        System.out.println("Hello World!");
+        // Task: Print the numbers from 1 to 100.
+        // For multiples of 3, print "Fizz" instead of the number.
+        // For multiples of 5, print "Buzz".
+        // For numbers that are multiples of both 3 and 5, print "FizzBuzz".
+
+        for (int i = 1; i <= 100; i++) {
+            if (i % 3 == 0) {
+                System.out.println("Fizz");
+            } else if (i % 5 == 0) {
+                System.out.println("Buzz");
+            } else {
+                System.out.println(i);
+            }
+        }
     }
 }`;
 
@@ -103,11 +134,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
             const result = await executeJavaCode(currentCode);
             set({ terminalOutput: result.output });
         } catch (error) {
-            const errorMessage = `Error executing code: ${error instanceof Error ? error.message : String(error)
-                }`;
+            const errorMessage = `Error executing code: ${error instanceof Error ? error.message : String(error)}`;
             set({ terminalOutput: errorMessage });
         } finally {
             set({ isExecuting: false });
         }
-    }
+    },
+
+    // AI model preferences
+    selectedModelId: aiService.getSelectedModelId(),
+    availableModels: aiService.getAvailableModels(),
+    setSelectedModel: (modelId: string) => {
+        aiService.setModel(modelId);
+        set({ selectedModelId: modelId });
+    },
+    getSelectedModel: () => {
+        return aiService.getSelectedModel();
+    },
+
+    // Editor theme
+    selectedTheme: editorThemes.find(t => t.isDefault) || editorThemes[0],
+    availableThemes: editorThemes,
+    setSelectedTheme: (themeId: string) => {
+        const theme = editorThemes.find(t => t.id === themeId);
+        set({ selectedTheme: theme || editorThemes[0] });
+    },
+
+    // Settings modal
+    isSettingsOpen: false,
+    setSettingsOpen: (isOpen: boolean) => set({ isSettingsOpen: isOpen }),
 }));

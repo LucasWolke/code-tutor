@@ -1,17 +1,16 @@
 import { createHighlighter, Highlighter } from "shiki";
 
-// Use lazy initialization for highlighter
 let highlighter: Highlighter;
 
 async function initializeHighlighter() {
     try {
-        // Create the highlighter, it can be reused
         highlighter = await createHighlighter({
             themes: [
-                'synthwave-84',
                 'houston',
-                'vitesse-dark',
-                'vitesse-light',
+                'github-dark-default',
+                'catppuccin-mocha',
+                'github-light-default',
+                'rose-pine-dawn',
             ],
             langs: [
                 'java'
