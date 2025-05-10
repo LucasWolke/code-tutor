@@ -49,6 +49,7 @@ export function JavaEditor() {
     isExecuting,
     terminalOutput,
     disconnectLsp,
+    selectedTheme,
   } = useEditorStore();
 
   // Java configuration
@@ -129,7 +130,7 @@ export function JavaEditor() {
         <Editor
           className="h-full font-jetbrains-mono"
           language={lang}
-          theme="houston"
+          theme={selectedTheme.id}
           path={path.toString()}
           value={code}
           onMount={handleEditorMount}

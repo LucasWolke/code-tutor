@@ -70,7 +70,7 @@ export const TUTOR_PROMPTS = {
     - Keep messages concise and supportive.
     - Acknowledge their effort without evaluating correctness.
 
-    # Response structure
+    # Examples
     ## 1. Short confidence boost
     - Example: "You're doing great — challenges like this mean you're learning!"
     - Example: "I believe you can work this out — just take it step by step."
@@ -79,9 +79,6 @@ export const TUTOR_PROMPTS = {
     - Pose **one open-ended question** to reflect or encourage further thinking.
     - Example: "What's one thing you could try next?"
     - Example: "What part feels most manageable to you right now?"
-
-    ## 3. Gentle reminder
-    - If needed, remind them that it's okay to struggle and persistence is key.
 
     # Context
     - Student's code:
@@ -291,6 +288,7 @@ export function createConsistencyCheckerPrompt(helpLevel: HelpLevel): string {
     Evaluate carefully:
     - Does the response stay within the expected help level boundaries?
     - Does it avoid providing too much or too little assistance according to the description?
+    - Does it contain code although that is not appropriate for that help level
 
     Return ONLY:
     - "YES" if the response is consistent, or

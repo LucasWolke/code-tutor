@@ -7,7 +7,7 @@ import { useEditorStore } from "@/lib/stores/editorStore";
 import { HelpLevel } from "@/lib/langchain/types";
 import { v4 as uuidv4 } from "uuid";
 
-// Map help levels to descriptive names
+// Map help levels to strings
 const helpLevelNames = {
   [HelpLevel.Motivational]: "Motivational",
   [HelpLevel.Feedback]: "Feedback",
@@ -32,7 +32,7 @@ interface EnhancedChatMessage extends ChatMessage {
 }
 
 export function ChatInterface() {
-  const { code } = useEditorStore();
+  const { code, getSelectedModel } = useEditorStore();
   const [messages, setMessages] = useState<EnhancedChatMessage[]>([
     {
       role: "assistant",
@@ -122,10 +122,18 @@ export function ChatInterface() {
     }
   };
 
+  // Get the current selected model
+  const selectedModel = getSelectedModel();
+
   return (
     <div className="flex font-jetbrains-mono flex-col h-full bg-gray-900 border-l border-gray-700 overflow-hidden">
       <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-3 border-b border-gray-700">
-        <span className="mr-2">AI Tutor</span>
+        <div className="flex items-center">
+          <span className="mr-2">AI Tutor</span>
+          <span className="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300">
+            {selectedModel.name}
+          </span>
+        </div>
         <div className="flex items-center space-x-2">
           <label htmlFor="helpLevel" className="text-sm text-gray-300">
             Help Level:

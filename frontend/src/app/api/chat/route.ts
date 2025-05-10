@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import {
     assessHelpLevel,
     createTutorRouterChain,
-    checkResponseConsistency
+    checkResponseConsistency,
+    getModelById
 } from '@/lib/langchain/tutorAgents';
+import { AIProvider } from '@/lib/config/models';
 import {
     getMemory,
     summarizeMemoryIfNeeded,
@@ -22,8 +24,8 @@ const messageCounters: Record<string, number> = {};
 export async function POST(request: Request): Promise<Response> {
     try {
         // Parse request body
-        const body = await request.json() as ChatRequest;
-        const { userId, sessionId, codeSnapshot, userMessage } = body;
+        const body = await request.json() as ChatRequest & { modelId?: string };
+        const { userId, sessionId, codeSnapshot, userMessage, modelId } = body;
 
         if (!userId || !sessionId || !userMessage) {
             return NextResponse.json(
@@ -32,11 +34,15 @@ export async function POST(request: Request): Promise<Response> {
             );
         }
 
-        // Get API key from environment
-        const apiKey = process.env.GOOGLE_API_KEY;
-        if (!apiKey) {
+        // Verify API key exists for selected model
+        const model = modelId ? getModelById(modelId) : null;
+        const providerKey = model?.provider === AIProvider.OpenAI
+            ? process.env.OPENAI_API_KEY
+            : process.env.GOOGLE_API_KEY;
+
+        if (!providerKey) {
             return NextResponse.json(
-                { error: 'API key is not configured' },
+                { error: 'API key is not configured for the selected model' },
                 { status: 500 }
             );
         }
@@ -59,9 +65,12 @@ export async function POST(request: Request): Promise<Response> {
             sessionId,
             code: codeSnapshot,
             userMessage,
+            modelId,
+            chat_history: chatHistory,
         });
 
         console.log("Help level assessed:", helpLevel);
+        if (modelId) console.log("Using model:", modelId);
 
         // Create a context object for the tutor chain
         const context: TutorContext = {
@@ -71,6 +80,7 @@ export async function POST(request: Request): Promise<Response> {
             userMessage,
             helpLevel,
             chat_history: chatHistory,
+            modelId,
         };
 
         // Periodically summarize the context
@@ -78,17 +88,15 @@ export async function POST(request: Request): Promise<Response> {
             await summarizeMemoryIfNeeded(sessionId);
         }
 
-        // First attempt
+        // Generate response with retry logic
         let responseText = await generateResponse(context);
         console.log("Tutor response:", responseText);
-
-        // Comment in code snippet to test consistency check
-        // responseText += "Here is the code snippet you asked for: if (i % 15 == 0) { System.out.println(\'FizzBuzz\'); }"
 
         // Check consistency
         let consistency = await checkResponseConsistency(
             responseText,
             helpLevel,
+            modelId
         );
         console.log("Response consistency check:", consistency);
 
@@ -104,11 +112,12 @@ export async function POST(request: Request): Promise<Response> {
             consistency = await checkResponseConsistency(
                 responseText,
                 helpLevel,
+                modelId
             );
             console.log("Retry response consistency check:", consistency);
 
             // If still not consistent, return error
-            if (!consistency) {
+            if (!consistency.isConsistent) {
                 return NextResponse.json(
                     { error: 'Inconsistent response' },
                     { status: 400 }

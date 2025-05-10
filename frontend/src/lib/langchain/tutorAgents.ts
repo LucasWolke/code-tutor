@@ -1,4 +1,5 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { ChatOpenAI } from "@langchain/openai";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { HelpLevel, TutorContext } from "./types";
 import { StringOutputParser } from "@langchain/core/output_parsers";
@@ -9,23 +10,64 @@ import {
     createConsistencyCheckerPrompt
 } from "./prompts";
 import { getRoleFromMessage } from "./memory";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import { AIProvider, availableModels, ModelConfig } from "../config/models";
 
-// Create a single Google Generative AI instance to be reused
-const defaultModel = new ChatGoogleGenerativeAI({
-    model: "gemini-2.0-flash",
-    temperature: 0.3
-});
+// Helper functions for model configuration
+export function getModelById(modelId: string): ModelConfig | undefined {
+    return availableModels.find(m => m.id === modelId);
+}
 
-// Higher quality model for level assessment
-const assessorModel = new ChatGoogleGenerativeAI({
-    model: "gemini-2.0-flash",
-    temperature: 0
-});
+export function getDefaultModel(): ModelConfig {
+    const defaultModel = availableModels.find(m => m.isDefault);
+    return defaultModel || availableModels[0];
+}
+
+/**
+ * Create a LangChain model based on model ID
+ */
+function createModelInstance(modelId?: string, temperature: number = 0.3): BaseChatModel {
+    // Get model config or use default if not found
+    const modelConfig = modelId ? getModelById(modelId) : getDefaultModel();
+
+    // Create the appropriate model instance
+    if (modelConfig?.provider === AIProvider.OpenAI) {
+        return new ChatOpenAI({
+            model: modelConfig.id,
+            temperature: temperature
+        });
+    } else {
+        // Default to Gemini
+        return new ChatGoogleGenerativeAI({
+            model: modelConfig?.id || "gemini-2.0-flash",
+            temperature: temperature
+        });
+    }
+}
+
+/**
+ * Format chat history into a readable string
+ */
+function formatChatHistory(chatHistory: any[]): string {
+    if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
+        return "No prior conversation.";
+    }
+
+    return chatHistory
+        .map(msg => {
+            const role = getRoleFromMessage(msg);
+            const content = msg.content || msg.text || "";
+            return `${role}: ${content}`;
+        })
+        .join("\n");
+}
 
 /**
  * Level Assessor: Analyzes user message and code to determine appropriate help level
  */
 export async function assessHelpLevel(context: Omit<TutorContext, "helpLevel">): Promise<HelpLevel> {
+    // Use a model with lower temperature for assessment
+    const assessorModel = createModelInstance(context.modelId, 0);
     const assessorPrompt = ChatPromptTemplate.fromTemplate(HELP_LEVEL_ASSESSOR_PROMPT);
     const assessorChain = assessorPrompt.pipe(assessorModel).pipe(new StringOutputParser());
 
@@ -43,31 +85,10 @@ export async function assessHelpLevel(context: Omit<TutorContext, "helpLevel">):
 }
 
 /**
- * Format chat history into a readable string
- */
-function formatChatHistory(chatHistory: any[]): string {
-    if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
-        return "No prior conversation.";
-    }
-
-    return chatHistory
-        .map(msg => {
-            const role = getRoleFromMessage(msg);
-            console.log("Message role:", role);
-            const content = msg.content || msg.text || "";
-            return `${role}: ${content}`;
-        })
-        .join("\n");
-}
-
-/**
  * Creates a tutor agent for a specific help level
  */
-function createTutorAgent(helpLevel: HelpLevel) {
-    const tutorModel = new ChatGoogleGenerativeAI({
-        model: "gemini-2.0-flash",
-        temperature: 0.3,
-    });
+function createTutorAgent(helpLevel: HelpLevel, modelId?: string) {
+    const tutorModel = createModelInstance(modelId, 0.3);
 
     return ChatPromptTemplate.fromTemplate(TUTOR_PROMPTS[helpLevel])
         .pipe(tutorModel)
@@ -90,13 +111,14 @@ export async function createTutorRouterChain() {
 
             // Select the appropriate agent based on the help level
             const helpLevel = context.helpLevel || HelpLevel.Motivational;
-            const agent = createTutorAgent(helpLevel);
+            const agent = createTutorAgent(helpLevel, context.modelId);
 
             // Invoke the agent with the properly formatted context
             const response = await agent.invoke({
                 code: context.code,
                 userMessage: context.userMessage,
-                chat_history: formattedHistory
+                chat_history: formattedHistory,
+                feedbackForRetry: context.feedbackForRetry
             });
 
             return response;
@@ -108,10 +130,11 @@ export async function createTutorRouterChain() {
  * Context Summarizer: Creates summaries of the current tutoring context
  */
 export async function summarizeContext(context: TutorContext): Promise<string> {
+    const summaryModel = createModelInstance(context.modelId, 0.3);
     const summaryPrompt = ChatPromptTemplate.fromTemplate(CONTEXT_SUMMARY_PROMPT);
 
     const summaryChain = summaryPrompt
-        .pipe(defaultModel)
+        .pipe(summaryModel)
         .pipe(new StringOutputParser());
 
     const response = await summaryChain.invoke({
@@ -128,13 +151,15 @@ export async function summarizeContext(context: TutorContext): Promise<string> {
 export async function checkResponseConsistency(
     response: string,
     helpLevel: HelpLevel,
+    modelId?: string
 ): Promise<{ isConsistent: boolean, feedback?: string }> {
+    const checkerModel = createModelInstance(modelId, 0);
     const checkerPrompt = ChatPromptTemplate.fromTemplate(
         createConsistencyCheckerPrompt(helpLevel)
     );
 
     const checkerChain = checkerPrompt
-        .pipe(assessorModel)
+        .pipe(checkerModel)
         .pipe(new StringOutputParser());
 
     const result = await checkerChain.invoke({
