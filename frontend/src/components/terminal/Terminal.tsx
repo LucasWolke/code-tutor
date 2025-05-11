@@ -17,6 +17,23 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
     }
   }, [output]);
 
+  // Parse and format the output, especially for error messages
+  const renderOutput = () => {
+    if (!output) {
+      return (
+        <div className="text-gray-400">
+          {isLoading ? "Running code..." : "Run your code to see output here"}
+        </div>
+      );
+    }
+
+    if (output.includes("Exception") || output.includes("error")) {
+      return <span className="text-red-500">{output}</span>;
+    }
+
+    return output;
+  };
+
   return (
     <div className="w-full h-full flex flex-col">
       <div className="bg-gray-800 font-jetbrains-mono text-white px-4 py-2 font-semibold border-b border-gray-700 flex items-center">
@@ -31,13 +48,7 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
         ref={terminalRef}
         className="flex-1 bg-gray-900 text-white font-jetbrains-mono p-4 overflow-y-auto whitespace-pre-wrap"
       >
-        {isLoading && !output ? (
-          <div className="text-gray-400">Running code...</div>
-        ) : output ? (
-          output
-        ) : (
-          <div className="text-gray-400">Run your code to see output here</div>
-        )}
+        {renderOutput()}
       </div>
     </div>
   );

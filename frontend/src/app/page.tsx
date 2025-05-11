@@ -2,7 +2,7 @@
 
 import { JavaEditor } from "@/components/editor/Editor";
 import { ChatInterface } from "@/components/chat/ChatInterface";
-import { SettingsModal } from "@/components/SettingsModal";
+import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useEditorStore } from "@/lib/stores/editorStore";
 
 export default function Home() {

@@ -13,14 +13,14 @@ export interface ExecutionResult {
  * @param code The Java code to execute
  * @returns The execution result containing output and status
  */
-export async function executeJavaCode(code: string): Promise<ExecutionResult> {
+export async function executeJavaCode(source: string): Promise<ExecutionResult> {
     try {
         const response = await fetch('http://localhost:3001/execute', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ code })
+            body: JSON.stringify({ source })
         });
 
         if (!response.ok) {

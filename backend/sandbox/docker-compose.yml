@@ -1,13 +1,18 @@
-# docker-compose.yml
 version: "3.8"
 
 services:
-  sandbox:
-    build: .
+  java-sandbox:
+    build: ./java-sandbox
+    image: java-sandbox:latest
+    entrypoint: ["true"]
+
+  code-executor:
+    build: ./node-server
+    image: code-executor:latest
+    container_name: code-executor
     ports:
       - "3001:3001"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: "512M"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - java-sandbox
