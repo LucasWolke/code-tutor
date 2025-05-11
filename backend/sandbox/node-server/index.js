@@ -21,7 +21,7 @@ app.post('/execute', async (req, res) => {
     }
     active++;
 
-    const { source, stdin = '', timeoutMs = 3000 } = req.body;
+    const { source, stdin = '', timeoutMs = 10000 } = req.body;
     if (typeof source !== 'string' || source.length > 50_000) {
         active--;
         return res.status(400).json({ error: 'Invalid source code.' });
@@ -66,9 +66,24 @@ app.post('/execute', async (req, res) => {
         container.modem.demuxStream(logStream, stdoutCollector, stderrCollector);
 
         await container.start();
-        await container.wait();
+        // wait for the container to finish, but kill it after timeoutMs
+        let timedOut = false;
+        const waitPromise = container.wait();
+        const killer = new Promise(resolve => {
+            setTimeout(async () => {
+                timedOut = true;
+                try { await container.kill(); } catch (_) { /* might already be dead */ }
+                resolve();
+            }, timeoutMs);
+        });
+        await Promise.race([waitPromise, killer]);
 
-        res.json({ output });
+        // 4) respond based on timeout vs normal exit
+        if (timedOut) {
+            res.status(408).json({ error: 'Execution timed out.' });
+        } else {
+            res.json({ output });
+        }
         await container.remove({ force: true });
 
     } catch (err) {
