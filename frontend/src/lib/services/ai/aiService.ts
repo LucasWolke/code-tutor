@@ -88,6 +88,7 @@ class AIService {
     async generateResponse(
         prompt: string,
         code: string,
+        terminalOutput?: string,
         options: { helpLevel?: HelpLevel } = {}
     ): Promise<{ text: string; helpLevel: HelpLevel }> {
         try {
@@ -102,7 +103,8 @@ class AIService {
                     codeSnapshot: code,
                     userMessage: prompt,
                     helpLevel: options.helpLevel,
-                    modelId: this.selectedModelId
+                    modelId: this.selectedModelId,
+                    terminalOutput: terminalOutput,
                 }),
             });
 
@@ -130,7 +132,8 @@ export const aiService = new AIService();
 export const generateResponse = (
     prompt: string,
     code: string,
+    terminalOutput?: string,
     options?: { helpLevel?: HelpLevel }
 ) => {
-    return aiService.generateResponse(prompt, code, options);
+    return aiService.generateResponse(prompt, code, terminalOutput, options);
 };

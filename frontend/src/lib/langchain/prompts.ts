@@ -89,6 +89,8 @@ export const TUTOR_PROMPTS = {
     {chat_history}
     - Student question:
     {userMessage}
+    - Terminal output:
+    {terminalOutput}
   `,
 
   [HelpLevel.Feedback]: `
@@ -128,6 +130,8 @@ export const TUTOR_PROMPTS = {
     {chat_history}
     - Student question:
     {userMessage}
+    - Terminal output:
+    {terminalOutput}
   `,
 
   [HelpLevel.GeneralStrategy]: `
@@ -166,6 +170,8 @@ export const TUTOR_PROMPTS = {
     {chat_history}
     - Student question:
     {userMessage}
+    - Terminal output:
+    {terminalOutput}
   `,
 
   [HelpLevel.ContentStrategy]: `
@@ -203,6 +209,8 @@ export const TUTOR_PROMPTS = {
     {chat_history}
     - Student question:
     {userMessage}
+    - Terminal output:
+    {terminalOutput}
   `,
 
   [HelpLevel.Contextual]: `
@@ -240,6 +248,8 @@ export const TUTOR_PROMPTS = {
     {chat_history}
     - Student question:
     {userMessage}
+    - Terminal output:
+    {terminalOutput}
   `
 };
 

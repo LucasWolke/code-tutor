@@ -20,6 +20,7 @@ export interface ChatRequest {
     userMessage: string;
     helpLevel?: HelpLevel; // Optional if we want to override the assessed level
     modelId?: string; // Optional model ID to use for generation
+    terminalOutput?: string; // Optional terminal output for context
 }
 
 /**
@@ -41,5 +42,6 @@ export interface TutorContext {
     helpLevel: HelpLevel;
     chat_history?: BaseMessage[];
     modelId?: string; // The AI model to use
+    terminalOutput?: string; // Optional terminal output for context
     feedbackForRetry?: string; // Feedback for retry attempts
 }

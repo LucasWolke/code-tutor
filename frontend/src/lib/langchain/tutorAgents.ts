@@ -118,6 +118,7 @@ export async function createTutorRouterChain() {
                 code: context.code,
                 userMessage: context.userMessage,
                 chat_history: formattedHistory,
+                terminalOutput: context.terminalOutput,
                 feedbackForRetry: context.feedbackForRetry
             });
 

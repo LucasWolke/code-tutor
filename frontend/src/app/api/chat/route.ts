@@ -25,7 +25,7 @@ export async function POST(request: Request): Promise<Response> {
     try {
         // Parse request body
         const body = await request.json() as ChatRequest & { modelId?: string };
-        const { userId, sessionId, codeSnapshot, userMessage, modelId } = body;
+        const { userId, sessionId, codeSnapshot, userMessage, terminalOutput = '', modelId } = body;
 
         if (!userId || !sessionId || !userMessage) {
             return NextResponse.json(
@@ -81,6 +81,7 @@ export async function POST(request: Request): Promise<Response> {
             helpLevel,
             chat_history: chatHistory,
             modelId,
+            terminalOutput
         };
 
         // Periodically summarize the context
