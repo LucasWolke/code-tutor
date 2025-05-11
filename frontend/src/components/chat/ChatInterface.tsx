@@ -1,59 +1,27 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { aiService, generateResponse } from "@/lib/services/ai/aiService";
-import { ChatMessage } from "@/lib/services/ai/types";
+import { useRef, useEffect } from "react";
 import { useEditorStore } from "@/lib/stores/editorStore";
+import {
+  useChatStore,
+  helpLevelNames,
+  helpLevelColors,
+} from "@/lib/stores/chatStore";
 import { HelpLevel } from "@/lib/langchain/types";
-import { v4 as uuidv4 } from "uuid";
-
-// Map help levels to strings
-const helpLevelNames = {
-  [HelpLevel.Motivational]: "Motivational",
-  [HelpLevel.Feedback]: "Feedback",
-  [HelpLevel.GeneralStrategy]: "General Strategy",
-  [HelpLevel.ContentStrategy]: "Content Strategy",
-  [HelpLevel.Contextual]: "Contextual",
-};
-
-// Map help levels to colors
-const helpLevelColors = {
-  [HelpLevel.Motivational]: "bg-purple-600",
-  [HelpLevel.Feedback]: "bg-blue-600",
-  [HelpLevel.GeneralStrategy]: "bg-green-600",
-  [HelpLevel.ContentStrategy]: "bg-yellow-600",
-  [HelpLevel.Contextual]: "bg-red-600",
-};
-
-// Enhanced chat message with help level
-interface EnhancedChatMessage extends ChatMessage {
-  helpLevel?: HelpLevel;
-  isLoading?: boolean;
-}
 
 export function ChatInterface() {
-  const { code, getSelectedModel } = useEditorStore();
-  const [messages, setMessages] = useState<EnhancedChatMessage[]>([
-    {
-      role: "assistant",
-      content:
-        "Hello! I'm your Java coding tutor. How can I help you today? I can provide assistance at different levels based on your needs.",
-    },
-  ]);
-  const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [sessionId] = useState(() => uuidv4());
-  const [userId] = useState(() => "user-" + uuidv4().substring(0, 8));
-  const [selectedHelpLevel, setSelectedHelpLevel] = useState<
-    HelpLevel | undefined
-  >(undefined);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { getSelectedModel } = useEditorStore();
+  const {
+    messages,
+    input,
+    setInput,
+    isLoading,
+    selectedHelpLevel,
+    setSelectedHelpLevel,
+    sendMessage,
+  } = useChatStore();
 
-  // Initialize the session when component mounts
-  useEffect(() => {
-    aiService.setSessionId(sessionId);
-    aiService.setUserId(userId);
-  }, [sessionId, userId]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -63,63 +31,7 @@ export function ChatInterface() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-
-    // Add user message to chat
-    const userMessage: EnhancedChatMessage = {
-      role: "user",
-      content: input,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    // Add loading placeholder message
-    const loadingMessage: EnhancedChatMessage = {
-      role: "assistant",
-      content: "Thinking...",
-      isLoading: true,
-    };
-
-    setMessages((prev) => [...prev, loadingMessage]);
-
-    try {
-      // Use non-streaming response
-      const response = await generateResponse(input, code, {
-        helpLevel: selectedHelpLevel,
-      });
-
-      // Replace loading message with response
-      setMessages((prevMessages) => {
-        const messagesWithoutLoading = prevMessages.filter(
-          (msg) => !msg.isLoading
-        );
-        return [
-          ...messagesWithoutLoading,
-          {
-            role: "assistant",
-            content: response.text,
-            helpLevel: response.helpLevel,
-          },
-        ];
-      });
-    } catch (error) {
-      // Handle error
-      setMessages((prevMessages) => {
-        const messagesWithoutLoading = prevMessages.filter(
-          (msg) => !msg.isLoading
-        );
-        return [
-          ...messagesWithoutLoading,
-          {
-            role: "assistant",
-            content: "Sorry, I encountered an error. Please try again later.",
-          },
-        ];
-      });
-      console.error("AI chat error:", error);
-    } finally {
-      setIsLoading(false);
-    }
+    await sendMessage(input);
   };
 
   // Get the current selected model
