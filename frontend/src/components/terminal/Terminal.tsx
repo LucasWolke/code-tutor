@@ -2,6 +2,7 @@
 
 import { useChatStore } from "@/lib/stores/chatStore";
 import { useRef, useEffect, useState } from "react";
+import { Terminal as TerminalIcon } from "lucide-react";
 
 interface TerminalProps {
   output: string;
@@ -67,6 +68,7 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
     <div className="w-full h-full flex flex-col">
       <div className="bg-gray-800 font-jetbrains-mono text-white px-4 py-2 font-semibold border-b border-gray-700 flex items-center justify-between">
         <div className="flex items-center">
+          <TerminalIcon className="w-5 h-5 mr-2" />
           <span className="mr-2">Terminal</span>
           {isLoading && (
             <div className="animate-pulse text-xs ml-2 text-gray-400">

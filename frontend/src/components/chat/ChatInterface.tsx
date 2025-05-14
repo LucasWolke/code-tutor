@@ -1,16 +1,15 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { useEditorStore } from "@/lib/stores/editorStore";
 import {
   useChatStore,
   helpLevelNames,
   helpLevelColors,
 } from "@/lib/stores/chatStore";
 import { HelpLevel } from "@/lib/langchain/types";
+import { BotMessageSquare } from "lucide-react";
 
 export function ChatInterface() {
-  const { getSelectedModel } = useEditorStore();
   const {
     messages,
     input,
@@ -34,21 +33,16 @@ export function ChatInterface() {
     await sendMessage(input);
   };
 
-  // Get the current selected model
-  const selectedModel = getSelectedModel();
-
   return (
     <div className="flex font-jetbrains-mono flex-col h-full bg-gray-900 border-l border-gray-700 overflow-hidden">
-      <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-3 border-b border-gray-700">
+      <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
         <div className="flex items-center">
-          <span className="mr-2">AI Tutor</span>
-          <span className="text-xs bg-gray-700 px-2 py-1 rounded-full text-gray-300">
-            {selectedModel.name}
-          </span>
+          <BotMessageSquare className="w-5 h-5 mr-2" />
+          <span className="mr-2">Tutor</span>
         </div>
         <div className="flex items-center space-x-2">
           <label htmlFor="helpLevel" className="text-sm text-gray-300">
-            Help Level:
+            Level:
           </label>
           <select
             id="helpLevel"
@@ -91,7 +85,7 @@ export function ChatInterface() {
             } rounded-lg p-3 text-white break-words`}
           >
             <div className="text-xs text-gray-400 mb-1 flex justify-between items-center">
-              <span>{message.role === "user" ? "You" : "Assistant"}</span>
+              <span>{message.role === "user" ? "You" : "Tutor"}</span>
               {message.helpLevel && (
                 <span
                   className={`px-2 py-0.5 ${
