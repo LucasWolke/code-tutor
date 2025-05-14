@@ -6,6 +6,7 @@ import type { MonacoLanguageClient } from 'monaco-languageclient';
 import { aiService } from '@/lib/services/ai/aiService';
 import { ModelConfig } from '@/lib/config/models';
 import { EditorTheme, editorThemes } from '@/lib/config/themes';
+import { useProblemStore } from './problemStore';
 
 interface EditorState {
     // Editor content
@@ -15,6 +16,11 @@ interface EditorState {
     // Editor instance
     editorInstance: editor.IStandaloneCodeEditor | null;
     setEditorInstance: (instance: editor.IStandaloneCodeEditor | null) => void;
+
+    // Editor actions
+    formatCode: () => void;
+    undo: () => void;
+    redo: () => void;
 
     // LSP connection
     languageClient: MonacoLanguageClient | null;
@@ -41,6 +47,9 @@ interface EditorState {
     // Settings modal
     isSettingsOpen: boolean;
     setSettingsOpen: (isOpen: boolean) => void;
+
+    // Problem integration
+    loadProblemBoilerplate: () => void;
 }
 
 // Initial Java code template
@@ -82,7 +91,24 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
             // Connect to LSP when editor is ready
             get().connectLsp();
+
+            // Load current problem's boilerplate if available
+            get().loadProblemBoilerplate();
         }
+    },
+
+    // Editor actions
+    formatCode: () => {
+        const { editorInstance } = get();
+        editorInstance?.getAction('editor.action.formatDocument')?.run();
+    },
+    undo: () => {
+        const { editorInstance } = get();
+        editorInstance?.trigger('keyboard', 'undo', null);
+    },
+    redo: () => {
+        const { editorInstance } = get();
+        editorInstance?.trigger('keyboard', 'redo', null);
     },
 
     // LSP connection
@@ -163,4 +189,15 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Settings modal
     isSettingsOpen: false,
     setSettingsOpen: (isOpen: boolean) => set({ isSettingsOpen: isOpen }),
+
+    // Problem integration
+    loadProblemBoilerplate: () => {
+        const { editorInstance } = get();
+        const { boilerplateCode } = useProblemStore.getState();
+
+        if (editorInstance && boilerplateCode) {
+            editorInstance.setValue(boilerplateCode);
+            set({ code: boilerplateCode });
+        }
+    }
 }));

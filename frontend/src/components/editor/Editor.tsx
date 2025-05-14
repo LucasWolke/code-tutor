@@ -2,13 +2,23 @@
 
 import dynamic from "next/dynamic";
 import * as vscode from "vscode";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { shikiToMonaco } from "@shikijs/monaco";
 import type { Monaco } from "@monaco-editor/react";
 import { highlighter } from "@/lib/shiki";
 import { Terminal } from "@/components/terminal/Terminal";
+import { ResetModal } from "@/components/editor/ResetModal";
 import { useEditorStore } from "@/lib/stores/editorStore";
-import { editor } from "monaco-editor";
+import { editor as MonacoEditor } from "monaco-editor";
+import {
+  Code2,
+  Play,
+  RefreshCw,
+  FileText,
+  Undo2,
+  Redo2,
+  Loader2,
+} from "lucide-react";
 
 // Dynamically import Monaco Editor with SSR disabled
 const Editor = dynamic(
@@ -31,6 +41,7 @@ const DefaultEditorOptionConfig = {
   scrollBeyondLastLine: false,
   fontSize: 14,
   tabSize: 2,
+  glyphMargin: true,
   automaticLayout: true,
   fontFamily: "'JetBrains Mono', 'var(--font-jetbrains-mono)', monospace",
   fontLigatures: true,
@@ -38,50 +49,55 @@ const DefaultEditorOptionConfig = {
 };
 
 export function JavaEditor() {
-  // Client-side hydration check
   const [hydrated, setHydrated] = useState(false);
-
-  // Get everything from the store
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const {
     code,
-    editorInstance,
     setEditorInstance,
     executeCode,
     isExecuting,
     terminalOutput,
     disconnectLsp,
     selectedTheme,
+    formatCode,
+    undo,
+    redo,
   } = useEditorStore();
 
-  // Java configuration
   const lang = "java";
   const path = vscode.Uri.file(`app/workspace/hello.java`);
 
-  function formatCode() {
-    editorInstance?.getAction("editor.action.formatDocument")?.run();
-  }
+  // a ref to hold our DecorationsCollection
+  const decorationsRef = useRef<ReturnType<
+    MonacoEditor.IStandaloneCodeEditor["createDecorationsCollection"]
+  > | null>(null);
 
   const handleEditorWillMount = useCallback((monaco: Monaco) => {
     shikiToMonaco(highlighter, monaco);
   }, []);
 
-  // Mark as hydrated when component mounts
   useEffect(() => {
     setHydrated(true);
-
-    // Cleanup LSP connection on unmount
     return () => {
       disconnectLsp();
     };
   }, [disconnectLsp]);
 
-  // Editor mount handler - store the instance
   const handleEditorMount = useCallback(
-    (editorInstance: editor.IStandaloneCodeEditor) => {
-      setEditorInstance(editorInstance);
+    (ed: MonacoEditor.IStandaloneCodeEditor) => {
+      setEditorInstance(ed);
+      decorationsRef.current = ed.createDecorationsCollection();
     },
     [setEditorInstance]
   );
+
+  const handleResetClick = () => {
+    setIsResetModalOpen(true);
+  };
+
+  const closeResetModal = () => {
+    setIsResetModalOpen(false);
+  };
 
   if (!hydrated) {
     return (
@@ -94,52 +110,79 @@ export function JavaEditor() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center font-jetbrains-mono justify-between bg-gray-800 px-4 py-2 border-b border-gray-700">
-        <span className="mr-2">Java Editor</span>
-        <div className="flex space-x-2">
+        <div className="flex items-center">
+          <Code2 className="w-5 h-5 mr-2" />
+          <span>Java Editor</span>
+        </div>
+
+        <div className="flex items-center">
+          {/* Editor history controls */}
+          <div className="flex mr-3 border-r border-gray-700 pr-3">
+            <button
+              onClick={undo}
+              className="w-8 h-8 flex items-center justify-center rounded text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={redo}
+              className="w-8 h-8 flex items-center justify-center rounded text-gray-300 hover:text-white hover:bg-gray-700 transition-colors"
+              title="Redo (Ctrl+Y)"
+              aria-label="Redo"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Code formatting */}
           <button
             onClick={formatCode}
-            className="flex items-center bg-gray-700 hover:bg-gray-600 text-gray-200 py-1 px-3 rounded text-sm transition-colors cursor-pointer"
-            title="Format Code"
+            className="w-8 h-8 flex items-center justify-center mr-3 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
+            title="Format Code (Alt+Shift+F)"
+            aria-label="Format Code"
           >
-            Format
+            <FileText className="w-4 h-4" />
           </button>
-          <button
-            onClick={executeCode}
-            disabled={isExecuting}
-            className={`bg-green-600 hover:bg-green-700 text-white py-1 px-4 rounded flex items-center transition-colors ${
-              isExecuting ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-            }`}
-          >
-            {isExecuting ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Running...
-              </>
-            ) : (
-              <>Run</>
-            )}
-          </button>
+
+          {/* Code actions */}
+          <div className="flex space-x-2">
+            <button
+              onClick={handleResetClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white h-8 px-3 rounded flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-opacity-50"
+              title="Reset to original problem code"
+              aria-label="Reset Code"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              <span className="text-sm">Reset</span>
+            </button>
+
+            <button
+              onClick={executeCode}
+              disabled={isExecuting}
+              className={`bg-green-600 hover:bg-green-700 text-white h-8 px-4 rounded flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 ${
+                isExecuting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"
+              }`}
+              title="Run Code"
+              aria-label={isExecuting ? "Running code..." : "Run Code"}
+            >
+              {isExecuting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span className="text-sm">Running</span>
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4 mr-2" fill="currentColor" />
+                  <span className="text-sm">Run</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
+
       <div className="flex-1 min-h-0">
         <Editor
           className="h-full font-jetbrains-mono"
@@ -153,9 +196,11 @@ export function JavaEditor() {
           loading={<div>Loading...</div>}
         />
       </div>
+
       <div className="h-64 min-h-64">
         <Terminal output={terminalOutput} isLoading={isExecuting} />
       </div>
+      <ResetModal isOpen={isResetModalOpen} onClose={closeResetModal} />
     </div>
   );
 }
