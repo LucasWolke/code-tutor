@@ -24,6 +24,8 @@
 *.tar.gz
 *.rar
 
+!jdt-language-server-1.37.0-202406271335.tar.gz
+
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*

@@ -18,9 +18,9 @@ COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
-# Download a specific version of Eclipse JDT Language Server instead of latest snapshot
+COPY jdt-language-server-1.37.0-202406271335.tar.gz ./
+
 RUN mkdir -p /app/ls && \
-    wget https://download.eclipse.org/jdtls/milestones/1.37.0/jdt-language-server-1.37.0-202406271335.tar.gz && \
     tar -xzf jdt-language-server-1.37.0-202406271335.tar.gz -C /app/ls && \
     rm jdt-language-server-1.37.0-202406271335.tar.gz && \
     echo "LS Directory Structure:" && \
