@@ -1,56 +1,80 @@
-FROM node:20-slim AS build
+# syntax=docker/dockerfile:1
+
+########################################
+#               BUILDER
+########################################
+FROM node:20-slim AS builder
+LABEL stage=builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG JDT_VERSION=1.37.0-202406271335
+ARG JDT_TARBALL=jdt-language-server-${JDT_VERSION}.tar.gz
 
 WORKDIR /app
 
-# Install necessary packages
-RUN apt-get update && \
-    apt-get install -y openjdk-17-jdk wget unzip && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install build deps
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         openjdk-17-jdk-headless wget unzip \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package.json and install dependencies
-COPY package.json ./
-# Use npm install instead of npm ci since we don't have a package-lock.json file
-RUN npm install
+# Install JS deps
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
-# Copy source code and build
+# Build TS
 COPY tsconfig.json ./
 COPY src/ ./src/
 RUN npm run build
 
-COPY jdt-language-server-1.37.0-202406271335.tar.gz ./
+# Unpack JDT LS, flatten top-level folder, list JARs, set perms
+COPY ${JDT_TARBALL} ./
+RUN mkdir ls \
+    && tar --strip-components=1 -xzf ${JDT_TARBALL} -C ls \
+    && rm ${JDT_TARBALL} \
+    && echo "LS JARs:" \
+    && find ls -type f -name "*.jar" || true \
+    && chmod -R a+rX ls
 
-RUN mkdir -p /app/ls && \
-    tar -xzf jdt-language-server-1.37.0-202406271335.tar.gz -C /app/ls && \
-    rm jdt-language-server-1.37.0-202406271335.tar.gz && \
-    echo "LS Directory Structure:" && \
-    find /app/ls -type f -name "*.jar" | grep -i launcher && \
-    chmod -R 755 /app/ls
+# Sample Java workspace
+RUN mkdir workspace \
+    && echo 'public class Hello {' > workspace/Hello.java \
+    && echo '    public static void main(String[] args) {' >> workspace/Hello.java \
+    && echo '        System.out.println("Hello, World!");' >> workspace/Hello.java \
+    && echo '    }' >> workspace/Hello.java \
+    && echo '}' >> workspace/Hello.java
 
-# Create workspace directory and add sample Java file
-RUN mkdir -p /app/workspace && \
-    echo "public class hello {\n\tpublic static void main(String[] args) {\n\t\tSystem.out.println(\"Hello, World!\");\n\t}\n}" > /app/workspace/hello.java
+########################################
+#               RUNTIME
+########################################
+FROM node:20-slim AS runtime
+LABEL stage=runtime
 
-# Create a smaller runtime image
-FROM node:20-slim
-
+ARG DEBIAN_FRONTEND=noninteractive
 WORKDIR /app
 
-# Install Java
-RUN apt-get update && \
-    apt-get install -y openjdk-17-jre && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install only JRE
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+         openjdk-17-jre-headless \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy built files from build stage
-COPY --from=build /app/lib ./lib
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/ls ./ls
-COPY --from=build /app/workspace ./workspace
-COPY package.json ./
+# Production mode
+ENV NODE_ENV=production
 
-# Expose the port
+# Copy artifacts
+COPY --from=builder /app/lib        ./lib
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/ls         ./ls
+COPY --from=builder /app/workspace  ./workspace
+COPY --from=builder /app/package.json ./
+
+# Strip out any devDeps
+RUN npm prune --production
+
+# Drop to non-root: use built-in `node` user
+RUN chown -R node:node /app
+USER node
+
 EXPOSE 30003
-
-# Set the command to run the server
 CMD ["npm", "start"]
