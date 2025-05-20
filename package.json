@@ -36,22 +36,6 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
-        "@shikijs/monaco": "^3.2.1",
         "concurrently": "^8.2.2"
-    },
-    "dependencies": {
-        "@codingame/monaco-vscode-languages-service-override": "^15.0.3",
-        "@codingame/monaco-vscode-python-default-extension": "^15.0.3",
-        "@codingame/monaco-vscode-textmate-service-override": "^15.0.3",
-        "@codingame/monaco-vscode-theme-defaults-default-extension": "^15.0.3",
-        "@codingame/monaco-vscode-theme-service-override": "^15.0.3",
-        "@langchain/core": "^0.3.55",
-        "@langchain/google-genai": "^0.2.5",
-        "@langchain/openai": "^0.5.10",
-        "langchain": "^0.3.24",
-        "monaco-editor": "^0.36.1",
-        "monaco-languageclient": "^5.0.1",
-        "shiki": "^3.2.1",
-        "vscode": "npm:@codingame/monaco-vscode-api@~1.76.6"
     }
 }
