@@ -93,7 +93,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Message handling
     sendErrorMessage: async () => {
 
-        const content = "Help me fix this error in my code.";
+        const content = "Help me fix this error in my code. I dont need any other advice for this next message, just how to solve this error. ";
 
         // Add loading placeholder message
         const loadingMessage: EnhancedChatMessage = {

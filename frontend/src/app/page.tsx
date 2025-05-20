@@ -5,7 +5,7 @@ import { ChatInterface } from "@/components/chat/ChatInterface";
 import { SettingsModal } from "@/components/settings/SettingsModal";
 import { useEditorStore } from "@/lib/stores/editorStore";
 import { MarkdownPanel } from "@/components/problem/MarkdownPanel";
-import { Settings } from "lucide-react";
+import { Settings, Info, Brain } from "lucide-react";
 
 export default function Home() {
   const { setSettingsOpen } = useEditorStore();
@@ -14,8 +14,9 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-gray-900">
       <header className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <h1 className="text-xl font-jetbrains-mono font-semibold text-white">
-            Code Tutor 🧠
+          <Brain className="w-5 h-5 text-gray-300" />
+          <h1 className="text-xl font-jetbrains-mono font-semibold text-white ml-2">
+            Code Tutor
           </h1>
         </div>
         <div className="flex items-center space-x-4">
@@ -27,13 +28,16 @@ export default function Home() {
             <Settings className="w-5 h-5" />
             <span className="ml-1">Settings</span>
           </button>
+          <div className="text-gray-400">|</div>
           <a
-            href="https://github.com/LucasWolke/code-tutor"
+            href="https://github.com/LucasWolke/code-tutor/wiki/Tutor-Meeting"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-300 hover:text-white transition-colors text-sm"
+            className="flex items-center text-gray-300 hover:text-white transition-colors"
+            title="View instructions"
           >
-            Source Code
+            <Info className="w-5 h-5" />
+            <span className="ml-1">Instructions</span>
           </a>
         </div>
       </header>
