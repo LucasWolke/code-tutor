@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import * as vscode from "vscode";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { shikiToMonaco } from "@shikijs/monaco";
 import type { Monaco } from "@monaco-editor/react";
@@ -9,7 +8,8 @@ import { highlighter } from "@/lib/shiki";
 import { Terminal } from "@/components/terminal/Terminal";
 import { ResetModal } from "@/components/editor/ResetModal";
 import { useEditorStore } from "@/lib/stores/editorStore";
-import { editor as MonacoEditor } from "monaco-editor";
+import type { editor as MonacoEditor } from "monaco-editor";
+
 import {
   Code2,
   Play,
@@ -65,7 +65,7 @@ export function JavaEditor() {
   } = useEditorStore();
 
   const lang = "java";
-  const path = vscode.Uri.file(`app/workspace/hello.java`);
+  const path = "/app/workspace/hello.java";
 
   // a ref to hold our DecorationsCollection
   const decorationsRef = useRef<ReturnType<

@@ -12,7 +12,6 @@ export default function Home() {
 
   return (
     <div className="flex flex-col h-screen bg-gray-900">
-      {/* Header */}
       <header className="bg-gray-800 border-b border-gray-700 px-6 py-3 flex items-center justify-between">
         <div className="flex items-center">
           <h1 className="text-xl font-jetbrains-mono font-semibold text-white">
@@ -39,25 +38,20 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main content - Three-panel view with Problem, Editor, and Chat */}
       <main className="flex-1 overflow-hidden flex flex-col md:flex-row">
-        {/* Problem description section - responsive width */}
         <div className="flex-shrink-0 md:w-1/5 lg:w-1/6 xl:w-1/5 h-full overflow-hidden border-r border-gray-700 min-h-[200px] md:min-h-0">
           <MarkdownPanel />
         </div>
 
-        {/* Editor section - adaptive width */}
         <div className="flex-grow flex-shrink basis-0 min-w-0 h-full overflow-hidden order-first md:order-none">
           <JavaEditor />
         </div>
 
-        {/* Chat interface - responsive width */}
         <div className="flex-shrink-0 md:w-1/5 lg:w-1/4 xl:w-1/5 h-full overflow-hidden border-l border-gray-700 min-h-[200px] md:min-h-0">
           <ChatInterface />
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="bg-gray-800 border-t border-gray-700 px-6 py-2 text-xs text-gray-400">
         <div className="flex justify-between items-center">
           <div>Java Web IDE with AI Tutor</div>
@@ -65,7 +59,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Settings Modal */}
       <SettingsModal />
     </div>
   );
