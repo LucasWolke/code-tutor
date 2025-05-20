@@ -36,6 +36,8 @@
     "author": "",
     "license": "ISC",
     "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^8.32.1",
+        "@typescript-eslint/parser": "^8.32.1",
         "concurrently": "^8.2.2"
     }
 }
