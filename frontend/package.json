@@ -44,6 +44,7 @@
     "@tailwindcss/typography": "^0.5.16",
     "@types/react": "^19",
     "shiki": "^3.2.1",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "typescript": "^5.8.3"
   }
 }
