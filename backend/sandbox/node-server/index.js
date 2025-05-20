@@ -7,7 +7,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://code-tutor-gray.vercel.app']
+    origin: ['http://localhost:3000', 'code-tutor-jade.vercel.app']
 }));
 app.use(express.json({ limit: '100kb' }));
 
@@ -21,7 +21,7 @@ app.post('/execute', async (req, res) => {
     }
     active++;
 
-    const { source, stdin = '', timeoutMs = 10000 } = req.body;
+    const { source, stdin = '', timeoutMs = 20000 } = req.body;
     if (typeof source !== 'string' || source.length > 50_000) {
         active--;
         return res.status(400).json({ error: 'Invalid source code.' });
