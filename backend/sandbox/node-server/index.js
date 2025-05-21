@@ -7,7 +7,7 @@ const path = require('path');
 
 const app = express();
 app.use(cors({
-    origin: ['http://localhost:3000', 'code-tutor-jade.vercel.app']
+    origin: ['http://localhost:3000', 'https://code-tutor-jade.vercel.app']
 }));
 app.use(express.json({ limit: '100kb' }));
 
