@@ -7,7 +7,7 @@
         "frontend",
         "backend/lsp",
         "backend",
-        "backend/sandbox"
+        "backend/piston"
     ],
     "scripts": {
         "dev:frontend": "npm run dev --workspace frontend",
@@ -16,11 +16,11 @@
         "build:backend": "npm run build --workspace backend",
         "start:backend": "npm run start:services --workspace backend",
         "start:lsp": "docker-compose -f backend/lsp/docker-compose.yml up -d",
-        "start:sandbox": "docker-compose -f backend/sandbox/docker-compose.yml up -d",
+        "start:piston": "docker-compose -f backend/piston/docker-compose.yaml up -d",
         "stop:lsp": "docker-compose -f backend/lsp/docker-compose.yml down",
-        "stop:sandbox": "docker-compose -f backend/sandbox/docker-compose.yml down",
-        "start:services": "concurrently -n LSP,SANDBOX \"npm run start:lsp\" \"npm run start:sandbox\"",
-        "stop:services": "concurrently -n LSP,SANDBOX \"npm run stop:lsp\" \"npm run stop:sandbox\"",
+        "stop:piston": "docker-compose -f backend/piston/docker-compose.yml down",
+        "start:services": "concurrently -n LSP,PISTON \"npm run start:lsp\" \"npm run start:piston\"",
+        "stop:services": "concurrently -n LSP,PISTON \"npm run stop:lsp\" \"npm run stop:piston\"",
         "dev": "concurrently -n FRONTEND,SERVICES \"npm run dev:frontend\" \"npm run start:services\"",
         "build": "npm run build:frontend && npm run build:backend",
         "start": "npm run dev",

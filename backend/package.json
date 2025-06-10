@@ -4,10 +4,10 @@
     "private": true,
     "workspaces": [
         "backend/lsp",
-        "backend/sandbox"
+        "backend/piston"
     ],
     "scripts": {
-        "build": "npm --workspace backend/lsp run build && npm --workspace backend/sandbox run build",
-        "start:services": "npm run start:lsp --workspace backend/lsp && npm run start:sandbox --workspace backend/sandbox"
+        "build": "npm --workspace backend/lsp run build && npm --workspace backend/piston run build",
+        "start:services": "npm run start:lsp --workspace backend/lsp && npm run start:piston --workspace backend/piston"
     }
 }
