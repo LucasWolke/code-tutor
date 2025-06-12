@@ -1,35 +1,17 @@
 import { create } from 'zustand';
-import { v4 as uuidv4 } from 'uuid';
-import { ChatMessage } from '@/lib/services/ai/types';
-import { HelpLevel } from '@/lib/langchain/types';
-import { aiService, generateResponse } from '@/lib/services/ai/aiService';
-import { useEditorStore } from './editorStore';
-
-// Enhanced chat message with help level
-export interface EnhancedChatMessage extends ChatMessage {
-    helpLevel?: HelpLevel;
-    isLoading?: boolean;
-}
-
-// Help level name mappings
-export const helpLevelNames = {
-    [HelpLevel.Motivational]: "Motivational",
-    [HelpLevel.Feedback]: "Feedback",
-    [HelpLevel.GeneralStrategy]: "General Strategy",
-    [HelpLevel.ContentStrategy]: "Content Strategy",
-    [HelpLevel.Contextual]: "Contextual",
-};
-
-// Help level color mappings
-export const helpLevelColors = {
-    [HelpLevel.Motivational]: "bg-purple-600",
-    [HelpLevel.Feedback]: "bg-blue-600",
-    [HelpLevel.GeneralStrategy]: "bg-green-600",
-    [HelpLevel.ContentStrategy]: "bg-yellow-600",
-    [HelpLevel.Contextual]: "bg-red-600",
-};
+import { AIMessage, HumanMessage } from "@langchain/core/messages"; // Assuming standard Langchain import
+import { EnhancedChatMessage, HelpLevel, ModelConfig } from '@/types/chat';
+import { availableModels, getDefaultModel } from '@/lib/config/models';
+import { getModelById } from '@/lib/config/models';
+import { generateResponse } from '@/lib/services/aiService';
 
 interface ChatState {
+    // Model selection
+    selectedModelId: string;
+    setSelectedModelId: (modelId: string) => void;
+    getSelectedModelId: () => string;
+    getAvailableModels: () => ModelConfig[];
+    getSelectedModel: () => ModelConfig;
     // Chat messages
     messages: EnhancedChatMessage[];
     addMessage: (message: EnhancedChatMessage) => void;
@@ -42,10 +24,6 @@ interface ChatState {
     // Loading state
     isLoading: boolean;
 
-    // Session management
-    sessionId: string;
-    userId: string;
-
     // Help level selection
     selectedHelpLevel: HelpLevel | undefined;
     setSelectedHelpLevel: (level: HelpLevel | undefined) => void;
@@ -55,24 +33,33 @@ interface ChatState {
     sendErrorMessage: () => Promise<void>;
 }
 
+
 export const useChatStore = create<ChatState>((set, get) => ({
+    // Model selection
+    selectedModelId: getDefaultModel().id, // Initialize with default model
+    setSelectedModelId: (modelId) => {
+        const model = getModelById(modelId);
+        if (!model) {
+            console.warn(`Model '${modelId}' is not available, using default model`);
+            set({ selectedModelId: getDefaultModel().id });
+        } else {
+            set({ selectedModelId: modelId });
+        }
+    },
+    getSelectedModelId: () => get().selectedModelId,
+    getAvailableModels: () => availableModels,
+    getSelectedModel: () => {
+        const model = getModelById(get().selectedModelId);
+        return model || getDefaultModel();
+    },
+
     // Initialize with a welcome message
-    messages: [
-        {
-            role: "assistant",
-            content: "Hello! I'm your Java coding tutor. How can I help you?",
-        },
-    ],
+    messages: [new AIMessage({ content: "Hello! I'm your Java coding tutor. How can I help you?" }) as EnhancedChatMessage],
     addMessage: (message) => set((state) => ({
         messages: [...state.messages, message]
     })),
     clearMessages: () => set({
-        messages: [
-            {
-                role: "assistant",
-                content: "Hello! I'm your Java coding tutor. How can I help you?",
-            },
-        ]
+        messages: [new AIMessage({ content: "Hello! I'm your Java coding tutor. How can I help you?" }) as EnhancedChatMessage]
     }),
 
     // Input handling
@@ -82,38 +69,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Loading state
     isLoading: false,
 
-    // Session management
-    sessionId: uuidv4(),
-    userId: `user-${uuidv4().substring(0, 8)}`,
-
     // Help level
     selectedHelpLevel: undefined,
     setSelectedHelpLevel: (level) => set({ selectedHelpLevel: level }),
 
     // Message handling
     sendErrorMessage: async () => {
-
         const content = "Help me fix this error in my code. I dont need any other advice for this next message, just how to solve this error. ";
 
+        // Add user message for the error request
+        const userErrorMessage = new HumanMessage({ content }) as EnhancedChatMessage;
+        get().addMessage(userErrorMessage);
+
         // Add loading placeholder message
-        const loadingMessage: EnhancedChatMessage = {
-            role: "assistant",
-            content: "Thinking...",
-            isLoading: true,
-        };
+        const loadingMessage = new AIMessage({ content: "Thinking..." }) as EnhancedChatMessage;
+        loadingMessage.isLoading = true;
         get().addMessage(loadingMessage);
+        set({ isLoading: true });
 
         try {
-            // Ensure aiService has the correct session and user IDs
-            aiService.setSessionId(get().sessionId);
-            aiService.setUserId(get().userId);
-
-            // Get current code from editor store
-            const code = useEditorStore.getState().code;
-            const terminalOutput = useEditorStore.getState().terminalOutput;
+            // Get current chat history including the new user error message
+            const chatHistory = get().messages.filter(msg => msg !== loadingMessage); // Exclude loading message itself from history
 
             // Generate AI response
-            const response = await generateResponse(content, code, terminalOutput, {
+            const response = await generateResponse(chatHistory, { // Use aiService instance
                 helpLevel: HelpLevel.Contextual,
             });
 
@@ -122,36 +101,24 @@ export const useChatStore = create<ChatState>((set, get) => ({
                 const messagesWithoutLoading = state.messages.filter(
                     (msg) => !msg.isLoading
                 );
+                const newMessage = new AIMessage({ content: response.text }) as EnhancedChatMessage;
+                newMessage.helpLevel = response.helpLevel;
                 return {
                     messages: [
                         ...messagesWithoutLoading,
-                        {
-                            role: "assistant",
-                            content: response.text,
-                            helpLevel: response.helpLevel,
-                        },
+                        newMessage,
                     ],
                     isLoading: false,
                 };
             });
         } catch (error) {
             // Handle errors
-            set((state) => {
-                const messagesWithoutLoading = state.messages.filter(
-                    (msg) => !msg.isLoading
-                );
-                return {
-                    messages: [
-                        ...messagesWithoutLoading,
-                        {
-                            role: "assistant",
-                            content: "Sorry, I encountered an error. Please try again later.",
-                        },
-                    ],
-                    isLoading: false,
-                };
-            });
-            console.error("AI chat error:", error);
+            const errorMessage = new AIMessage({ content: "Sorry, I encountered an error. Please try again." }) as EnhancedChatMessage;
+            set((state) => ({
+                messages: [...state.messages.filter(msg => !msg.isLoading), errorMessage],
+                isLoading: false,
+            }));
+            console.error("AI chat error in sendErrorMessage:", error);
         }
     },
 
@@ -163,86 +130,54 @@ export const useChatStore = create<ChatState>((set, get) => ({
         if (get().isLoading || !content.trim()) {
             return;
         }
-
         // Set loading state
         set({ isLoading: true });
 
         // Add user message
-        const userMessage: EnhancedChatMessage = {
-            role: "user",
-            content,
-        };
+        const userMessage = new HumanMessage({ content }) as EnhancedChatMessage;
         get().addMessage(userMessage);
 
         // Clear input field
         set({ input: "" });
 
         // Add loading placeholder message
-        const loadingMessage: EnhancedChatMessage = {
-            role: "assistant",
-            content: "Thinking...",
-            isLoading: true,
-        };
+        const loadingMessage = new AIMessage({ content: "Thinking..." }) as EnhancedChatMessage;
+        loadingMessage.isLoading = true;
         get().addMessage(loadingMessage);
 
         try {
-            // Ensure aiService has the correct session and user IDs
-            aiService.setSessionId(get().sessionId);
-            aiService.setUserId(get().userId);
+            // Compose chat history
+            // The chatHistory should be all messages up to the point before the AI responds, including the current userMessage
+            const chatHistory = get().messages.filter(msg => msg !== loadingMessage); // Exclude loading message itself
 
-            // Get current code from editor store
-            const code = useEditorStore.getState().code;
-            const terminalOutput = useEditorStore.getState().terminalOutput;
-
-            // Generate AI response
-            const response = await generateResponse(content, code, terminalOutput, {
-                helpLevel: selectedHelpLevel,
-            });
+            const response = await generateResponse( // Use aiService instance
+                chatHistory,
+                { helpLevel: selectedHelpLevel }
+            );
 
             // Replace loading message with actual response
             set((state) => {
                 const messagesWithoutLoading = state.messages.filter(
                     (msg) => !msg.isLoading
                 );
+                const newMessage = new AIMessage({ content: response.text }) as EnhancedChatMessage;
+                newMessage.helpLevel = response.helpLevel;
                 return {
                     messages: [
                         ...messagesWithoutLoading,
-                        {
-                            role: "assistant",
-                            content: response.text,
-                            helpLevel: response.helpLevel,
-                        },
+                        newMessage,
                     ],
                     isLoading: false,
                 };
             });
         } catch (error) {
             // Handle errors
-            set((state) => {
-                const messagesWithoutLoading = state.messages.filter(
-                    (msg) => !msg.isLoading
-                );
-                return {
-                    messages: [
-                        ...messagesWithoutLoading,
-                        {
-                            role: "assistant",
-                            content: "Sorry, I encountered an error. Please try again later.",
-                        },
-                    ],
-                    isLoading: false,
-                };
-            });
-            console.error("AI chat error:", error);
+            const errorMessage = new AIMessage({ content: "Sorry, I encountered an error. Please try again." + error }) as EnhancedChatMessage;
+            set((state) => ({
+                messages: [...state.messages.filter(msg => !msg.isLoading), errorMessage],
+                isLoading: false,
+            }));
+            console.error("AI chat error in sendMessage:", error);
         }
     },
 }));
-
-
-
-// Initialize session on the server side
-if (typeof window !== 'undefined') {
-    const { sessionId, userId } = useChatStore.getState();
-    aiService.setSessionId(sessionId);
-    aiService.setUserId(userId);
-}

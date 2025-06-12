@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { shikiToMonaco } from "@shikijs/monaco";
 import type { Monaco } from "@monaco-editor/react";
-import { highlighter } from "@/lib/shiki";
+import { highlighter } from "@/lib/config/themes";
 import { Terminal } from "@/components/terminal/Terminal";
 import { ResetModal } from "@/components/editor/ResetModal";
 import { useEditorStore } from "@/lib/stores/editorStore";
@@ -18,6 +18,7 @@ import {
   Undo2,
   Redo2,
   Loader2,
+  CheckCircle,
 } from "lucide-react";
 
 // Dynamically import Monaco Editor with SSR disabled
@@ -27,6 +28,24 @@ const Editor = dynamic(
     const monaco = await import("monaco-editor");
     const { loader } = await import("@monaco-editor/react");
     loader.config({ monaco });
+    self.MonacoEnvironment = {
+      getWorker(_, label) {
+        if (label === "typescript") {
+          return new Worker(
+            new URL(
+              "monaco-editor/esm/vs/language/typescript/ts.worker.js",
+              import.meta.url
+            )
+          );
+        }
+        return new Worker(
+          new URL(
+            "monaco-editor/esm/vs/editor/editor.worker.js",
+            import.meta.url
+          )
+        );
+      },
+    };
     return (await import("@monaco-editor/react")).Editor;
   },
   {
@@ -62,6 +81,8 @@ export function JavaEditor() {
     formatCode,
     undo,
     redo,
+    runTests,
+    isRunningTests,
   } = useEditorStore();
 
   const lang = "java";
@@ -135,7 +156,6 @@ export function JavaEditor() {
               <Redo2 className="w-4 h-4" />
             </button>
           </div>
-
           {/* Code formatting */}
           <button
             onClick={formatCode}
@@ -144,8 +164,7 @@ export function JavaEditor() {
             aria-label="Format Code"
           >
             <FileText className="w-4 h-4" />
-          </button>
-
+          </button>{" "}
           {/* Code actions */}
           <div className="flex space-x-2">
             <button
@@ -156,6 +175,30 @@ export function JavaEditor() {
             >
               <RefreshCw className="w-4 h-4 mr-2" />
               <span className="text-sm">Reset</span>
+            </button>
+
+            <button
+              onClick={runTests}
+              disabled={isRunningTests || isExecuting}
+              className={`bg-orange-600 hover:bg-orange-700 text-white h-8 px-3 rounded flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50 ${
+                isRunningTests || isExecuting
+                  ? "opacity-70 cursor-not-allowed"
+                  : "cursor-pointer"
+              }`}
+              title="Run Tests"
+              aria-label={isRunningTests ? "Running tests..." : "Run Tests"}
+            >
+              {isRunningTests ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <span className="text-sm">Testing</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  <span className="text-sm">Test</span>
+                </>
+              )}
             </button>
 
             <button
@@ -186,7 +229,7 @@ export function JavaEditor() {
       <div className="flex-1 min-h-0">
         <Editor
           className="h-full font-jetbrains-mono"
-          language={lang}
+          language="java"
           theme={selectedTheme.id}
           path={path.toString()}
           value={code}

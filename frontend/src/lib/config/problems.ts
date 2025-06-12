@@ -28,21 +28,52 @@ Output: ['o','l','l','e','h']
 - 1 ≤ s.length ≤ 10^5
 - Use O(1) extra memory.
 `,
-        boilerplateCode: `public class Main {
-    public static void reverseString(char[] s) {
-        // TODO: implement two-pointer swap
+        boilerplateCode: `public char[] reverseString(char[] s) {
+    // TODO: implement two-pointer swap
+    int left = 0;
+    int right = s.length - 1;
+    
+    while (left < right) {
+        // Swap characters at left and right indices
+        char temp = s[left];
+        s[left] = s[right];
+        s[right] = temp;
+        
+        // Move pointers toward each other
+        left++;
+        right--;
     }
-
-    public static void main(String[] args) {
-        char[] s1 = {'h','e','l','l','o'};
-        reverseString(s1);
-        System.out.println(java.util.Arrays.toString(s1));
-
-        char[] s2 = {'H','a','n','n','a','h'};
-        reverseString(s2);
-        System.out.println(java.util.Arrays.toString(s2));
-    }
-}`
+    
+    return s;
+}`,
+        methodSignature: {
+            name: "reverseString",
+            returnType: "char[]",
+            parameters: [
+                { name: "s", type: "char[]" }
+            ]
+        },
+        testCases: [
+            {
+                inputs: [['h', 'e', 'l', 'l', 'o']],
+                expectedOutput: ['o', 'l', 'l', 'e', 'h'],
+                description: "Reverse the string 'hello'"
+            },
+            {
+                inputs: [['H', 'a', 'n', 'n', 'a', 'h']],
+                expectedOutput: ['h', 'a', 'n', 'n', 'a', 'H'],
+                description: "Reverse the string 'Hannah'"
+            },
+            {
+                inputs: [['a']],
+                expectedOutput: ['a'],
+                description: "Reverse single character"
+            }
+        ],
+        additionalResources: [
+            "Java Arrays - Oracle Documentation - https://docs.oracle.com/javase/tutorial/java/nutsandbolts/arrays.html",
+            "Reverse String In-Place Video Tutorial - https://www.youtube.com/watch?v=T-IFvmUgL0g"
+        ]
     },
 
     // MEDIUM PROBLEM
@@ -72,17 +103,39 @@ Output: true
 - 1 ≤ s.length ≤ 10^4
 - s contains only '(', ')', '{', '}', '[' and ']'.
 `,
-        boilerplateCode: `public class Main {
-    public static boolean isValid(String s) {
-        // TODO: use stack to match brackets
-        return false;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(isValid("()[]{}")); // true
-        System.out.println(isValid("(]"));     // false
-    }
-}`
+        boilerplateCode: `public boolean isValid(String s) {
+    // TODO: use stack to match brackets
+    return false;
+}`,
+        methodSignature: {
+            name: "isValid",
+            returnType: "boolean",
+            parameters: [
+                { name: "s", type: "String" }
+            ]
+        },
+        testCases: [
+            {
+                inputs: ["()[]{}"],
+                expectedOutput: true,
+                description: "Valid parentheses mix"
+            },
+            {
+                inputs: ["(]"],
+                expectedOutput: false,
+                description: "Invalid parentheses"
+            },
+            {
+                inputs: ["([)]"],
+                expectedOutput: false,
+                description: "Incorrectly nested parentheses"
+            },
+            {
+                inputs: ["{[]}"],
+                expectedOutput: true,
+                description: "Properly nested brackets"
+            }
+        ]
     },
 
     // HARD PROBLEM
@@ -97,13 +150,13 @@ Find the length of the shortest transformation sequence from beginWord to endWor
 **Function Signature**
 
 \`\`\`java
-int ladderLength(String begin, String end, List<String> wordList)
+int ladderLength(String beginWord, String endWord, List<String> wordList)
 \`\`\`
 
 **Example**
 
 \`\`\`
-Input: begin = "hit", end = "cog", list = ["hot","dot","dog","lot","log","cog"]
+Input: beginWord = "hit", endWord = "cog", wordList = ["hot","dot","dog","lot","log","cog"]
 Output: 5
 \`\`\`
 
@@ -112,22 +165,31 @@ Output: 5
 - 1 ≤ wordList.length ≤ 5000
 - All words have the same length ≤ 10.
 `,
-        boilerplateCode: `import java.util.*;
-public class Main {
-    public static int ladderLength(String begin, String end, List<String> wordList) {
-        // TODO: BFS or bidirectional BFS
-        return 0;
-    }
-
-    public static void main(String[] args) {
-        System.out.println(
-            ladderLength("hit", "cog", Arrays.asList("hot","dot","dog","lot","log","cog"))
-        ); // 5
-        System.out.println(
-            ladderLength("hit", "cog", Arrays.asList("hot","dot","dog","lot","log"))
-        ); // 0
-    }
-}`
+        boilerplateCode: `public int ladderLength(String beginWord, String endWord, List<String> wordList) {
+    // TODO: BFS or bidirectional BFS
+    return 0;
+}`,
+        methodSignature: {
+            name: "ladderLength",
+            returnType: "int",
+            parameters: [
+                { name: "beginWord", type: "String" },
+                { name: "endWord", type: "String" },
+                { name: "wordList", type: "List<String>" }
+            ]
+        },
+        testCases: [
+            {
+                inputs: ["hit", "cog", ["hot", "dot", "dog", "lot", "log", "cog"]],
+                expectedOutput: 5,
+                description: "Standard word ladder case"
+            },
+            {
+                inputs: ["hit", "cog", ["hot", "dot", "dog", "lot", "log"]],
+                expectedOutput: 0,
+                description: "No path to target word"
+            }
+        ]
     }
 ];
 

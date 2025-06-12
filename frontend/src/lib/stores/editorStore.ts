@@ -1,12 +1,11 @@
 import { create } from 'zustand';
 import type { editor } from 'monaco-editor';
-import { executeJavaCode } from '@/lib/services/codeExecutionService';
+import { executeJavaCode, runTestCases } from '@/lib/services/codeExecutionService';
 import { connectToLanguageServer, disconnectLanguageServer } from '@/lib/services/languageServerService';
 import type { MonacoLanguageClient } from 'monaco-languageclient';
-import { aiService } from '@/lib/services/ai/aiService';
-import { ModelConfig } from '@/lib/config/models';
 import { EditorTheme, editorThemes } from '@/lib/config/themes';
 import { useProblemStore } from './problemStore';
+import { TestRunResult } from '@/types/code';
 
 interface EditorState {
     // Editor content
@@ -33,11 +32,10 @@ interface EditorState {
     terminalOutput: string;
     executeCode: () => Promise<void>;
 
-    // AI model preferences
-    selectedModelId: string;
-    availableModels: ModelConfig[];
-    setSelectedModel: (modelId: string) => void;
-    getSelectedModel: () => ModelConfig;
+    // Test execution
+    isRunningTests: boolean;
+    testResults: TestRunResult | null;
+    runTests: () => Promise<void>;
 
     // Editor theme
     selectedTheme: EditorTheme;
@@ -141,9 +139,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
                 isLspConnected: false
             });
         }
-    },
-
-    // Code execution
+    },    // Code execution
     isExecuting: false,
     terminalOutput: "",
     executeCode: async () => {
@@ -167,15 +163,58 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         }
     },
 
-    // AI model preferences
-    selectedModelId: aiService.getSelectedModelId(),
-    availableModels: aiService.getAvailableModels(),
-    setSelectedModel: (modelId: string) => {
-        aiService.setModel(modelId);
-        set({ selectedModelId: modelId });
-    },
-    getSelectedModel: () => {
-        return aiService.getSelectedModel();
+    // Test execution
+    isRunningTests: false,
+    testResults: null, runTests: async () => {
+        const { editorInstance } = get();
+        if (!editorInstance) return;
+
+        const { testCases, methodSignature } = useProblemStore.getState();
+        if (!testCases || testCases.length === 0) {
+            set({
+                terminalOutput: "No test cases available for this problem.",
+                testResults: null
+            });
+            return;
+        }
+
+        if (!methodSignature) {
+            set({
+                terminalOutput: "No method signature available for this problem.",
+                testResults: null
+            });
+            return;
+        }
+
+        set({
+            isRunningTests: true,
+            isExecuting: true,
+            terminalOutput: "Running tests...",
+            testResults: null
+        });
+
+        try {
+            const currentCode = editorInstance.getValue();
+            const result = await runTestCases(currentCode, methodSignature, testCases);
+
+            // Format test results for terminal output
+            let output = `Test Results: ${result.allPassed ? "All tests passed!" : "Some tests failed."}\n\n`;
+            set({
+                terminalOutput: output,
+                testResults: result
+            });
+        } catch (error) {
+            const errorMessage = `Error running tests: ${error instanceof Error ? error.message : String(error)}`;
+            set({
+                terminalOutput: errorMessage,
+                testResults: null
+            });
+        } finally {
+            set({
+                isRunningTests: false,
+                isExecuting: false
+            });
+        }
     },
 
     // Editor theme

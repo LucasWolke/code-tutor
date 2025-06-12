@@ -1,12 +1,10 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import {
-  useChatStore,
-  helpLevelNames,
-  helpLevelColors,
-} from "@/lib/stores/chatStore";
-import { HelpLevel } from "@/lib/langchain/types";
+import ReactMarkdown from "react-markdown";
+import { useChatStore } from "@/lib/stores/chatStore";
+import { HelpLevel } from "@/types/chat";
+import { helpLevelNames, helpLevelColors } from "@/lib/config/helpLevels";
 import { BotMessageSquare } from "lucide-react";
 
 export function ChatInterface() {
@@ -81,11 +79,11 @@ export function ChatInterface() {
           <div
             key={index}
             className={`${
-              message.role === "user" ? "bg-gray-800" : "bg-gray-700"
+              message.getType() === "human" ? "bg-gray-800" : "bg-gray-700"
             } rounded-lg p-3 text-white break-words`}
           >
             <div className="text-xs text-gray-400 mb-1 flex justify-between items-center">
-              <span>{message.role === "user" ? "You" : "Tutor"}</span>
+              <span>{message.getType() === "human" ? "You" : "Tutor"}</span>
               {message.helpLevel && (
                 <span
                   className={`px-2 py-0.5 ${
@@ -107,7 +105,61 @@ export function ChatInterface() {
                   </div>
                 </>
               ) : (
-                message.content
+                <div className="prose prose-invert prose-sm max-w-none">
+                  <ReactMarkdown
+                    components={{
+                      a: ({ node, ...props }) => (
+                        <a
+                          {...props}
+                          className="text-blue-400 hover:text-blue-300 underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        />
+                      ),
+                      code: ({ className, node, ...props }) => (
+                        <code {...props} className={className} />
+                      ),
+                      pre: ({ node, ...props }) => (
+                        <pre
+                          {...props}
+                          className="bg-gray-600 p-2 rounded overflow-x-auto"
+                        />
+                      ),
+                      blockquote: ({ node, ...props }) => (
+                        <blockquote
+                          {...props}
+                          className="border-l-4 border-gray-500 pl-4 italic"
+                        />
+                      ),
+                      h1: ({ node, ...props }) => (
+                        <h1 {...props} className="text-xl font-bold mb-2" />
+                      ),
+                      h2: ({ node, ...props }) => (
+                        <h2 {...props} className="text-lg font-bold mb-2" />
+                      ),
+                      h3: ({ node, ...props }) => (
+                        <h3 {...props} className="text-base font-bold mb-1" />
+                      ),
+                      ul: ({ node, ...props }) => (
+                        <ul {...props} className="list-disc pl-4 space-y-1" />
+                      ),
+                      ol: ({ node, ...props }) => (
+                        <ol
+                          {...props}
+                          className="list-decimal pl-4 space-y-1"
+                        />
+                      ),
+                      strong: ({ node, ...props }) => (
+                        <strong {...props} className="font-bold" />
+                      ),
+                      em: ({ node, ...props }) => (
+                        <em {...props} className="italic" />
+                      ),
+                    }}
+                  >
+                    {message.content.toString()}
+                  </ReactMarkdown>
+                </div>
               )}
             </div>
           </div>

@@ -1,17 +1,19 @@
 import React, { useState } from "react";
 import { useEditorStore } from "@/lib/stores/editorStore";
-import { AIProvider, availableModels } from "@/lib/config/models";
+import { availableModels } from "@/lib/config/models";
+import { useChatStore } from "@/lib/stores/chatStore";
+import { AIProvider } from "@/types/chat";
 
 export const SettingsModal: React.FC = () => {
   const {
     isSettingsOpen,
     setSettingsOpen,
-    selectedModelId,
-    setSelectedModel,
     availableThemes,
     selectedTheme,
     setSelectedTheme,
   } = useEditorStore();
+
+  const { selectedModelId, setSelectedModelId } = useChatStore();
 
   const [activeTab, setActiveTab] = useState<"model" | "theme">("model");
 
@@ -84,7 +86,7 @@ export const SettingsModal: React.FC = () => {
                       ? "bg-blue-100 dark:bg-blue-900 border-blue-500"
                       : "hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
                   }`}
-                  onClick={() => setSelectedModel(model.id)}
+                  onClick={() => setSelectedModelId(model.id)}
                 >
                   <div className="flex justify-between items-center">
                     <div>

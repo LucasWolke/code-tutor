@@ -1,16 +1,4 @@
-
-export enum AIProvider {
-    OpenAI = "openai",
-    Gemini = "gemini",
-}
-
-export interface ModelConfig {
-    id: string;
-    name: string;
-    provider: AIProvider;
-    description?: string;
-    isDefault?: boolean;
-}
+import { AIProvider, ModelConfig } from "@/types/chat";
 
 export const availableModels: ModelConfig[] = [
     {
@@ -33,3 +21,12 @@ export const availableModels: ModelConfig[] = [
         description: 'Faster and more cost-effective model'
     }
 ];
+
+export function getDefaultModel(): ModelConfig {
+    return availableModels[0];
+}
+
+// Helper functions for model configuration
+export function getModelById(modelId: string): ModelConfig | undefined {
+    return availableModels.find(m => m.id === modelId);
+}

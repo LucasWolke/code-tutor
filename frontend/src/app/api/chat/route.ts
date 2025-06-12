@@ -3,36 +3,20 @@ import {
     assessHelpLevel,
     createTutorRouterChain,
     checkResponseConsistency,
-    getModelById
 } from '@/lib/langchain/tutorAgents';
-import { AIProvider } from '@/lib/config/models';
 import {
-    getMemory,
-    summarizeMemoryIfNeeded,
-    addUserMessage,
-    addAIMessage
-} from '@/lib/langchain/memory';
-import {
-    ChatRequest,
-    ChatResponse,
+    AIProvider,
+    HelpLevel,
     TutorContext,
-} from '@/lib/langchain/types';
-
-// Track message count to trigger periodic context summarization
-const messageCounters: Record<string, number> = {};
+} from '@/types/chat';
+import { ChatRequest, ChatResponse } from '@/types/api'
+import { getModelById } from '@/lib/config/models';
 
 export async function POST(request: Request): Promise<Response> {
     try {
         // Parse request body
         const body = await request.json() as ChatRequest & { modelId?: string };
-        const { userId, sessionId, codeSnapshot, userMessage, terminalOutput = '', modelId } = body;
-
-        if (!userId || !sessionId || !userMessage) {
-            return NextResponse.json(
-                { error: 'Missing required fields' },
-                { status: 400 }
-            );
-        }
+        const { code, chatHistory, testResults, modelId, additionalResources } = body;
 
         // Verify API key exists for selected model
         const model = modelId ? getModelById(modelId) : null;
@@ -47,58 +31,72 @@ export async function POST(request: Request): Promise<Response> {
             );
         }
 
-        // Increment message counter for session
-        messageCounters[sessionId] = (messageCounters[sessionId] || 0) + 1;
+        // Construct string of failed test results
+        let testResultsString = '';
+        if (testResults?.results && testResults?.results.length > 0) {
+            testResults.results.forEach(result => {
+                if (!result.passed) {
+                    testResultsString += `Test ${result.testCase}`;
+                    if (result.error) {
+                        testResultsString += ` failed: ${result.error}\n`;
+                    } else {
+                        testResultsString += ` failed: expected:${result.expectedOutput}, but was: ${result.actualOutput}\n`;
+                    }
+                }
+            })
+        };
 
-        // Get memory for this session
-        const memory = getMemory(sessionId);
+        let helpLevel: HelpLevel;
 
-        // Store user message in memory
-        await addUserMessage(sessionId, userMessage);
-
-        // Get conversation history
-        const chatHistory = await memory.chatHistory.getMessages();
-
-        // Assess help level or use provided level
-        const helpLevel = body.helpLevel || await assessHelpLevel({
-            userId,
-            sessionId,
-            code: codeSnapshot,
-            userMessage,
-            modelId,
-            chat_history: chatHistory,
-        });
+        console.log("testResults: " + JSON.stringify(testResults));
+        if (testResults?.allPassed) {
+            // If all tests passed, set help level to Finished
+            helpLevel = HelpLevel.Finished;
+        } else {
+            // Assess help level or use provided level
+            helpLevel = body.helpLevel || await assessHelpLevel(
+                modelId!,
+                chatHistory[chatHistory.length - 1],
+            );
+        }
 
         console.log("Help level assessed:", helpLevel);
         if (modelId) console.log("Using model:", modelId);
 
+        // Help level 0 = user asked unrelated question
+        if (helpLevel === HelpLevel.Unrelated) {
+            return NextResponse.json(
+                { responseText: "I'm here to help with Java coding. Please ask a related question." },
+                { status: 200 }
+            );
+        }
+
         // Create a context object for the tutor chain
         const context: TutorContext = {
-            userId,
-            sessionId,
-            code: codeSnapshot,
-            userMessage,
-            helpLevel,
-            chat_history: chatHistory,
+            code,
+            chatHistory,
             modelId,
-            terminalOutput
+            helpLevel,
+            testResults: testResultsString,
+            additionalResources: additionalResources?.toString(),
         };
-
-        // Periodically summarize the context
-        if (messageCounters[sessionId] % 5 === 0) {
-            await summarizeMemoryIfNeeded(sessionId);
-        }
 
         // Generate response with retry logic
         let responseText = await generateResponse(context);
         console.log("Tutor response:", responseText);
 
         // Check consistency
-        let consistency = await checkResponseConsistency(
-            responseText,
-            helpLevel,
-            modelId
-        );
+        let consistency;
+        if (helpLevel !== HelpLevel.Finished) {
+            consistency = await checkResponseConsistency(
+                responseText,
+                helpLevel,
+                modelId
+            );
+        } else {
+            consistency = { isConsistent: true, feedback: '' };
+        }
+
         console.log("Response consistency check:", consistency);
 
         // If inconsistent, try once more with feedback
@@ -125,9 +123,6 @@ export async function POST(request: Request): Promise<Response> {
                 );
             }
         }
-
-        // Store AI response in memory
-        await addAIMessage(sessionId, responseText);
 
         // Prepare the response object
         const chatResponse: ChatResponse = {
@@ -158,5 +153,5 @@ async function generateResponse(ctx: TutorContext, feedbackForRetry?: string): P
         ? { ...ctx, feedbackForRetry }
         : ctx;
 
-    return routerChain.invoke(contextWithFeedback);
+    return (await routerChain.invoke(contextWithFeedback)).text;
 }

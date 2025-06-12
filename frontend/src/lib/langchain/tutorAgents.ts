@@ -1,27 +1,15 @@
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOpenAI } from "@langchain/openai";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { HelpLevel, TutorContext } from "./types";
+import { ChatPromptTemplate, SystemMessagePromptTemplate } from "@langchain/core/prompts";
+import { AIProvider, EnhancedChatMessage, HelpLevel, TutorContext } from "@/types/chat";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import {
     HELP_LEVEL_ASSESSOR_PROMPT,
     TUTOR_PROMPTS,
-    CONTEXT_SUMMARY_PROMPT,
     createConsistencyCheckerPrompt
-} from "./prompts";
-import { getRoleFromMessage } from "./memory";
+} from "@/lib/config/prompts";
 import { BaseChatModel } from "@langchain/core/language_models/chat_models";
-import { AIProvider, availableModels, ModelConfig } from "../config/models";
-
-// Helper functions for model configuration
-export function getModelById(modelId: string): ModelConfig | undefined {
-    return availableModels.find(m => m.id === modelId);
-}
-
-export function getDefaultModel(): ModelConfig {
-    const defaultModel = availableModels.find(m => m.isDefault);
-    return defaultModel || availableModels[0];
-}
+import { getDefaultModel, getModelById } from "@/lib/config/models";
 
 /**
  * Create a LangChain model based on model ID
@@ -46,53 +34,25 @@ function createModelInstance(modelId?: string, temperature: number = 0.3): BaseC
 }
 
 /**
- * Format chat history into a readable string
- */
-function formatChatHistory(chatHistory: any[]): string {
-    if (!chatHistory || !Array.isArray(chatHistory) || chatHistory.length === 0) {
-        return "No prior conversation.";
-    }
-
-    return chatHistory
-        .map(msg => {
-            const role = getRoleFromMessage(msg);
-            const content = msg.content || msg.text || "";
-            return `${role}: ${content}`;
-        })
-        .join("\n");
-}
-
-/**
  * Level Assessor: Analyzes user message and code to determine appropriate help level
  */
-export async function assessHelpLevel(context: Omit<TutorContext, "helpLevel">): Promise<HelpLevel> {
+export async function assessHelpLevel(modelId: string, message: EnhancedChatMessage): Promise<HelpLevel> {
     // Use a model with lower temperature for assessment
-    const assessorModel = createModelInstance(context.modelId, 0);
-    const assessorPrompt = ChatPromptTemplate.fromTemplate(HELP_LEVEL_ASSESSOR_PROMPT);
-    const assessorChain = assessorPrompt.pipe(assessorModel).pipe(new StringOutputParser());
+    const assessorModel = createModelInstance(modelId, 0);
+    const systemMessage = SystemMessagePromptTemplate.fromTemplate(HELP_LEVEL_ASSESSOR_PROMPT);
 
-    const response = await assessorChain.invoke({
-        code: context.code,
-        userMessage: context.userMessage,
-        chat_history: formatChatHistory(context.chat_history || [])
-    });
+    const assessorPrompt = ChatPromptTemplate.fromMessages(
+        [
+            systemMessage,
+            message
+        ])
+        .pipe(assessorModel);
 
-    console.log("Help level assessment response:", response);
+    const response = await assessorPrompt.invoke({});
 
     // Extract the help level from response (should be a single number)
-    const levelMatch = response.match(/[1-5]/);
-    return levelMatch ? parseInt(levelMatch[0], 10) as HelpLevel : HelpLevel.Motivational;
-}
-
-/**
- * Creates a tutor agent for a specific help level
- */
-function createTutorAgent(helpLevel: HelpLevel, modelId?: string) {
-    const tutorModel = createModelInstance(modelId, 0.3);
-
-    return ChatPromptTemplate.fromTemplate(TUTOR_PROMPTS[helpLevel])
-        .pipe(tutorModel)
-        .pipe(new StringOutputParser());
+    const levelMatch = response.text.match(/[0-5]/);
+    return levelMatch ? parseInt(levelMatch[0], 10) as HelpLevel : HelpLevel.Unrelated;
 }
 
 /**
@@ -102,48 +62,37 @@ export async function createTutorRouterChain() {
     return {
         invoke: async function (context: TutorContext) {
             // Ensure the context has all required properties
-            if (!context || !context.userMessage) {
+            if (!context || !context.chatHistory) {
                 throw new Error("Invalid context provided to tutor router");
             }
 
-            // Format chat history if it exists
-            const formattedHistory = formatChatHistory(context.chat_history || []);
-
             // Select the appropriate agent based on the help level
             const helpLevel = context.helpLevel || HelpLevel.Motivational;
-            const agent = createTutorAgent(helpLevel, context.modelId);
+            const systemMessage = SystemMessagePromptTemplate.fromTemplate(TUTOR_PROMPTS[helpLevel]);
+
+
+            const tutorModel = createModelInstance(context.modelId, 0.3);
+
+            const tutorPrompt = ChatPromptTemplate.fromMessages(
+                [
+                    systemMessage,
+                    ...context.chatHistory,
+                ])
+                .pipe(tutorModel);
+
+            console.log("Tutor prompt: ", tutorPrompt);
 
             // Invoke the agent with the properly formatted context
-            const response = await agent.invoke({
+            const response = await tutorPrompt.invoke({
                 code: context.code,
-                userMessage: context.userMessage,
-                chat_history: formattedHistory,
-                terminalOutput: context.terminalOutput,
-                feedbackForRetry: context.feedbackForRetry
+                testResults: context.testResults,
+                feedbackForRetry: context.feedbackForRetry,
+                additionalResources: context.additionalResources || []
             });
 
             return response;
         }
     };
-}
-
-/**
- * Context Summarizer: Creates summaries of the current tutoring context
- */
-export async function summarizeContext(context: TutorContext): Promise<string> {
-    const summaryModel = createModelInstance(context.modelId, 0.3);
-    const summaryPrompt = ChatPromptTemplate.fromTemplate(CONTEXT_SUMMARY_PROMPT);
-
-    const summaryChain = summaryPrompt
-        .pipe(summaryModel)
-        .pipe(new StringOutputParser());
-
-    const response = await summaryChain.invoke({
-        code: context.code,
-        userMessage: context.userMessage,
-    });
-
-    return response;
 }
 
 /**
