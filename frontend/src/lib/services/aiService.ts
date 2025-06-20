@@ -11,7 +11,7 @@ export async function generateResponse(
     chatHistory: EnhancedChatMessage[] = [],
     options: { helpLevel?: HelpLevel } = {}
 ): Promise<{ text: string; helpLevel: HelpLevel }> {
-    const additionalResources = useProblemStore.getState().additionalResources || [];
+    const additionalResources = useProblemStore.getState().problem.additionalResources || [];
     const code = useEditorStore.getState().code;
     const testResults = useEditorStore.getState().testResults || undefined;
     const selectedModelId = useChatStore.getState().getSelectedModelId(); // Get modelId from chatStore
@@ -28,7 +28,8 @@ export async function generateResponse(
                 modelId: selectedModelId, // Use modelId from chatStore
                 chatHistory: chatHistory, // Ensure chatHistory is correctly formatted
                 testResults: testResults || [],
-                additionalResources: additionalResources
+                additionalResources: additionalResources,
+                strict: false,
             }),
         });
 

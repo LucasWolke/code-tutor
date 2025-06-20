@@ -1,12 +1,5 @@
+import { EditorTheme } from "@/types/code";
 import { createHighlighter, Highlighter } from "shiki";
-
-export interface EditorTheme {
-    id: string;
-    name: string;
-    description?: string;
-    isDefault?: boolean;
-    color: string;
-}
 
 export const editorThemes: EditorTheme[] = [
     {

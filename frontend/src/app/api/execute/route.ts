@@ -9,21 +9,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
         console.log('Execute API request:', body);
 
-        // Validate input
-        if ((!body.main || typeof body.main !== 'string')) {
-            return NextResponse.json(
-                { error: 'Invalid source code provided' },
-                { status: 400 }
-            );
-        }
-
-        if (body.main.length > 50000) {
-            return NextResponse.json(
-                { error: 'Source code too large (max 50KB)' },
-                { status: 400 }
-            );
-        }
-
         // Prepare Piston request payload
         const pistonPayload = {
             language: 'java',

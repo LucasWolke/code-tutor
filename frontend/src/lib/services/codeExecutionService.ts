@@ -2,6 +2,7 @@
  * Service for executing Java code using Piston API via internal server
  */
 
+import { Problem } from '@/types/problem';
 import { wrapCodeWithTests } from './codeWrapperService';
 import { ExecutionResult, MethodSignature, TestCase, TestResult, TestRunResult } from '@/types/code';
 
@@ -52,53 +53,6 @@ export async function executeJavaCode(main: string): Promise<ExecutionResult> {
 }
 
 /**
- * Executes Java code with a specific input
- * @param source The Java code to execute
- * @param input The input to provide to the program
- * @returns The execution result
- */
-export async function executeJavaCodeWithInput(source: string, input: string): Promise<ExecutionResult> {
-    try {
-        const response = await fetch('/api/execute', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                source: source,
-                stdin: input
-            })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            return {
-                output: errorData.error || `Error: ${response.statusText}`,
-                success: false,
-                error: errorData.error || response.statusText
-            };
-        }
-
-        const result = await response.json();
-
-        return {
-            output: result.output || 'No output',
-            success: result.success,
-            error: result.error || undefined,
-            exitCode: result.exitCode,
-            stderr: result.stderr,
-            stdout: result.stdout
-        };
-    } catch (error) {
-        return {
-            output: `Error connecting to execution server: ${error instanceof Error ? error.message : String(error)}`,
-            success: false,
-            error: 'Connection error'
-        };
-    }
-}
-
-/**
  * Runs test cases against Java code using LeetCode-style execution
  * @param userCode The user's solution method code
  * @param methodSignature The method signature information
@@ -107,15 +61,14 @@ export async function executeJavaCodeWithInput(source: string, input: string): P
  */
 export async function runTestCases(
     userCode: string,
-    methodSignature: MethodSignature,
-    testCases: TestCase[]
+    problem: Problem,
 ): Promise<TestRunResult> {
     const results: TestResult[] = [];
     let executionError: string | undefined;
 
     try {
         // Wrap the user code with test execution
-        const wrappedCode = wrapCodeWithTests(userCode, methodSignature, testCases);
+        const wrappedCode = wrapCodeWithTests(userCode, problem);
 
         // Execute the wrapped code
         const result = await executeJavaCode(wrappedCode);
@@ -123,7 +76,7 @@ export async function runTestCases(
         if (!result.success) {
             executionError = result.error || 'Execution failed';
             // Create failed results for all test cases
-            testCases.forEach(testCase => {
+            problem.testCases.forEach(testCase => {
                 results.push({
                     testCase,
                     passed: false,
@@ -134,11 +87,11 @@ export async function runTestCases(
         } else {
             // Parse the test results from output
             const output = result.stdout || result.output || '';
-            parseTestResults(output, testCases, results);
+            parseTestResults(output, problem.testCases, results);
         }
     } catch (error) {
         executionError = error instanceof Error ? error.message : String(error);
-        testCases.forEach(testCase => {
+        problem.testCases.forEach(testCase => {
             results.push({
                 testCase,
                 passed: false,
@@ -165,7 +118,7 @@ function parseTestResults(output: string, testCases: TestCase[], results: TestRe
 
     testCases.forEach((testCase, index) => {
         const casePattern = `CASE_${index + 1}:`;
-        const outputPattern = `OUTPUT_${index + 1}:`;
+        const outputPattern = `GOT_${index + 1}:`;
         const expectedPattern = `EXPECTED_${index + 1}:`;
         const errorPattern = `ERROR_${index + 1}:`;
         const resultLine = lines.find(line => line.includes(casePattern));
@@ -176,7 +129,7 @@ function parseTestResults(output: string, testCases: TestCase[], results: TestRe
         if (resultLine) {
             const passed = resultLine.includes('true');
             const actualOutput = outputLine ? outputLine.replace(outputPattern, '').trim() : 'No output';
-            const expectedOutput = expectedLine ? expectedLine.replace(expectedPattern, '').trim() : testCase.expectedOutput;
+            const expectedOutput = expectedLine ? expectedLine.replace(expectedPattern, '').trim() : testCase.expected;
             const error = errorLine ? errorLine.replace(errorPattern, '').trim() : undefined;
             results.push({
                 testCase,
@@ -191,7 +144,7 @@ function parseTestResults(output: string, testCases: TestCase[], results: TestRe
                 testCase,
                 passed: false,
                 actualOutput: 'No output',
-                expectedOutput: testCase.expectedOutput,
+                expectedOutput: testCase.expected,
                 error: error
             });
         }

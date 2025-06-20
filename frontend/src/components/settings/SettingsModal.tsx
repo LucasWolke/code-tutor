@@ -46,7 +46,6 @@ export const SettingsModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Tab Navigation */}
         <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
           <button
             className={`py-2 px-4 mr-2 ${
@@ -70,7 +69,6 @@ export const SettingsModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Model Selection Tab */}
         {activeTab === "model" && (
           <div className="mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
@@ -107,7 +105,6 @@ export const SettingsModal: React.FC = () => {
           </div>
         )}
 
-        {/* Theme Selection Tab */}
         {activeTab === "theme" && (
           <div className="mb-4">
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">

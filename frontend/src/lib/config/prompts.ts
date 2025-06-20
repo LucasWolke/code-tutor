@@ -327,11 +327,13 @@ export const CONTEXT_SUMMARY_PROMPT = `
  */
 export function createConsistencyCheckerPrompt(helpLevel: HelpLevel): string {
   const helpLevelDescriptions = {
+    [HelpLevel.Unrelated]: "The student's question is completely off topic, not related to the task, like asking for a recipe or sports guide.",
     [HelpLevel.Motivational]: "Only motivational support without any technical, strategic, or content-related hints. No guidance or corrections.",
     [HelpLevel.Feedback]: "General feedback on whether the student's method is appropriate, without offering content advice, solutions, or technical corrections.",
     [HelpLevel.GeneralStrategy]: "Strategic guidance to frame the student's approach (e.g., clarifying goals, recalling related problems), without referring to specific techniques or implementations.",
     [HelpLevel.ContentStrategy]: "General task-based suggestions (e.g., suggesting testing, visualizations, or writing assumptions), but without direct solutions or specific corrections.",
-    [HelpLevel.Contextual]: "Task-specific hints that point out relevant concepts or mistakes, offering focused help, but still avoiding giving full solutions or complete implementations."
+    [HelpLevel.Contextual]: "Task-specific hints that point out relevant concepts or mistakes, offering focused help, but still avoiding giving full solutions or complete implementations.",
+    [HelpLevel.Finished]: "Final feedback and closure for the session, summarizing key learning points and reinforcing understanding, without providing further assistance or corrections."
   };
 
   return `

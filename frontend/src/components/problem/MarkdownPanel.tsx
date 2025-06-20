@@ -11,7 +11,7 @@ import { useEditorStore } from "@/lib/stores/editorStore";
 import { FileCode2 } from "lucide-react";
 
 export function MarkdownPanel() {
-  const { title, content, difficulty, setProblem } = useProblemStore();
+  const { problem, setProblem } = useProblemStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { loadProblemBoilerplate } = useEditorStore();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -74,7 +74,7 @@ export function MarkdownPanel() {
             className="flex items-center text-white hover:text-blue-300 cursor-pointer transition duration-150"
           >
             <h2 className="font-medium font-jetbrains-mono mr-1">
-              {title || "Problem"}
+              {problem.title || "Problem"}
             </h2>
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -96,12 +96,12 @@ export function MarkdownPanel() {
 
           <span
             className={`ml-2 px-2 py-1 text-xs rounded text-white ${getDifficultyColor(
-              difficulty
+              problem.difficulty
             )}`}
           >
-            {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+            {problem.difficulty.charAt(0).toUpperCase() +
+              problem.difficulty.slice(1)}
           </span>
-          {/* Problem dropdown menu */}
           {isDropdownOpen && (
             <div
               ref={dropdownRef}
@@ -163,7 +163,7 @@ export function MarkdownPanel() {
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeHighlight]}
           >
-            {content || "No problem selected."}
+            {problem.content || "No problem selected."}
           </ReactMarkdown>
         </article>
       </div>

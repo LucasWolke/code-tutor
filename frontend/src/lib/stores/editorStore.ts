@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import type { editor } from 'monaco-editor';
-import { executeJavaCode, runTestCases } from '@/lib/services/codeExecutionService';
+import { runTestCases } from '@/lib/services/codeExecutionService';
 import { connectToLanguageServer, disconnectLanguageServer } from '@/lib/services/languageServerService';
 import type { MonacoLanguageClient } from 'monaco-languageclient';
-import { EditorTheme, editorThemes } from '@/lib/config/themes';
+import { editorThemes } from '@/lib/config/themes';
 import { useProblemStore } from './problemStore';
-import { TestRunResult } from '@/types/code';
+import { EditorTheme, TestRunResult } from '@/types/code';
 
 interface EditorState {
     // Editor content
@@ -30,7 +30,6 @@ interface EditorState {
     // Code execution
     isExecuting: boolean;
     terminalOutput: string;
-    executeCode: () => Promise<void>;
 
     // Test execution
     isRunningTests: boolean;
@@ -142,45 +141,16 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     },    // Code execution
     isExecuting: false,
     terminalOutput: "",
-    executeCode: async () => {
-        const { editorInstance } = get();
-        if (!editorInstance) return;
-
-        set({
-            isExecuting: true,
-            terminalOutput: ""
-        });
-
-        try {
-            const currentCode = editorInstance.getValue();
-            const result = await executeJavaCode(currentCode);
-            set({ terminalOutput: result.output });
-        } catch (error) {
-            const errorMessage = `Error executing code: ${error instanceof Error ? error.message : String(error)}`;
-            set({ terminalOutput: errorMessage });
-        } finally {
-            set({ isExecuting: false });
-        }
-    },
-
     // Test execution
     isRunningTests: false,
     testResults: null, runTests: async () => {
         const { editorInstance } = get();
         if (!editorInstance) return;
 
-        const { testCases, methodSignature } = useProblemStore.getState();
-        if (!testCases || testCases.length === 0) {
+        const { problem } = useProblemStore.getState();
+        if (!problem) {
             set({
-                terminalOutput: "No test cases available for this problem.",
-                testResults: null
-            });
-            return;
-        }
-
-        if (!methodSignature) {
-            set({
-                terminalOutput: "No method signature available for this problem.",
+                terminalOutput: "No problem found.",
                 testResults: null
             });
             return;
@@ -195,7 +165,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
 
         try {
             const currentCode = editorInstance.getValue();
-            const result = await runTestCases(currentCode, methodSignature, testCases);
+            const result = await runTestCases(currentCode, problem);
 
             // Format test results for terminal output
             let output = `Test Results: ${result.allPassed ? "All tests passed!" : "Some tests failed."}\n\n`;
@@ -232,11 +202,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     // Problem integration
     loadProblemBoilerplate: () => {
         const { editorInstance } = get();
-        const { boilerplateCode } = useProblemStore.getState();
+        const { problem } = useProblemStore.getState();
 
-        if (editorInstance && boilerplateCode) {
-            editorInstance.setValue(boilerplateCode);
-            set({ code: boilerplateCode });
+        if (editorInstance && problem.boilerplateCode) {
+            editorInstance.setValue(problem.boilerplateCode);
+            set({ code: problem.boilerplateCode });
         }
     }
 }));

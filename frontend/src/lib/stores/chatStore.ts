@@ -146,11 +146,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
         get().addMessage(loadingMessage);
 
         try {
-            // Compose chat history
-            // The chatHistory should be all messages up to the point before the AI responds, including the current userMessage
-            const chatHistory = get().messages.filter(msg => msg !== loadingMessage); // Exclude loading message itself
+            // Compose chat history, only send last N messages
 
-            const response = await generateResponse( // Use aiService instance
+            const chatHistory = get().messages.filter(msg => msg !== loadingMessage); // Exclude loading message itself
+            const maxHistoryLength = 10; // Limit to last 10 messages
+            if (chatHistory.length > maxHistoryLength) {
+                chatHistory.splice(0, chatHistory.length - maxHistoryLength);
+            }
+
+            const response = await generateResponse(
                 chatHistory,
                 { helpLevel: selectedHelpLevel }
             );

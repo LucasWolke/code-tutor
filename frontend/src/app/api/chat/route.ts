@@ -3,7 +3,7 @@ import {
     assessHelpLevel,
     createTutorRouterChain,
     checkResponseConsistency,
-} from '@/lib/langchain/tutorAgents';
+} from '@/lib/services/tutorService';
 import {
     AIProvider,
     HelpLevel,
@@ -16,7 +16,7 @@ export async function POST(request: Request): Promise<Response> {
     try {
         // Parse request body
         const body = await request.json() as ChatRequest & { modelId?: string };
-        const { code, chatHistory, testResults, modelId, additionalResources } = body;
+        const { code, chatHistory, testResults, modelId, additionalResources, strict } = body;
 
         // Verify API key exists for selected model
         const model = modelId ? getModelById(modelId) : null;
@@ -87,7 +87,7 @@ export async function POST(request: Request): Promise<Response> {
 
         // Check consistency
         let consistency;
-        if (helpLevel !== HelpLevel.Finished) {
+        if (helpLevel !== HelpLevel.Finished && strict) {
             consistency = await checkResponseConsistency(
                 responseText,
                 helpLevel,

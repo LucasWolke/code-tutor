@@ -31,6 +31,7 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
 
   // Check for errors in the output
   useEffect(() => {
+    console.log("Checking output for errors:", output);
     if (output && (output.includes("Exception") || output.includes("error"))) {
       setHasError(true);
 
@@ -99,64 +100,63 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
         </div>
 
         <div className="space-y-3">
-          {testResults.results.map((result, index) => (
-            <div key={index} className="border-l-2 border-gray-600 pl-4 py-2">
-              <div
-                className={`flex items-center font-medium mb-2 ${
-                  result.passed ? "text-green-400" : "text-red-400"
-                }`}
-              >
-                {result.passed ? (
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                ) : (
-                  <XCircle className="w-4 h-4 mr-2" />
-                )}
-                <span>
-                  Test {index + 1}: {result.passed ? "PASS" : "FAIL"}
-                </span>
-              </div>
+          {!testResults.executionError &&
+            testResults.results.map((result, index) => (
+              <div key={index} className="border-l-2 border-gray-600 pl-4 py-2">
+                <div
+                  className={`flex items-center font-medium mb-2 ${
+                    result.passed ? "text-green-400" : "text-red-400"
+                  }`}
+                >
+                  {result.passed ? (
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                  ) : (
+                    <XCircle className="w-4 h-4 mr-2" />
+                  )}
+                  <span>
+                    Test {index + 1}: {result.passed ? "PASS" : "FAIL"}
+                  </span>
+                </div>
 
-              <div className="space-y-1 text-sm">
-                {result.testCase.description && (
-                  <div className="text-gray-300">
-                    {result.testCase.description}
-                  </div>
-                )}
-
-                {result.testCase.inputs && (
-                  <div className="text-gray-300">
-                    <span className="text-gray-400 font-medium">Input:</span>{" "}
-                    <span className="text-white">{result.testCase.inputs}</span>
-                  </div>
-                )}
-
-                {!result.passed && (
-                  <div className="mt-2 space-y-1">
+                <div className="space-y-1 text-sm">
+                  {result.testCase.args && (
                     <div className="text-gray-300">
-                      <span className="text-gray-400 font-medium">
-                        Expected:
-                      </span>{" "}
-                      <span className="text-green-300">
-                        {result.expectedOutput}
+                      <span className="text-gray-400 font-medium">Input:</span>{" "}
+                      <span className="text-white">
+                        {result.testCase.args.join(",")}
                       </span>
                     </div>
-                    <div className="text-gray-300">
-                      <span className="text-gray-400 font-medium">Actual:</span>{" "}
-                      <span className="text-red-300">
-                        {result.actualOutput || "No output"}
-                      </span>
-                    </div>
-                    {result.error && (
-                      <div className="text-red-400 flex items-start">
-                        <AlertCircle className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
-                        <span>Error: {result.error}</span>
+                  )}
+
+                  {!result.passed && (
+                    <div className="mt-2 space-y-1">
+                      <div className="text-gray-300">
+                        <span className="text-gray-400 font-medium">
+                          Expected:
+                        </span>{" "}
+                        <span className="text-green-300">
+                          {result.expectedOutput}
+                        </span>
                       </div>
-                    )}
-                  </div>
-                )}
+                      <div className="text-gray-300">
+                        <span className="text-gray-400 font-medium">
+                          Actual:
+                        </span>{" "}
+                        <span className="text-red-300">
+                          {result.actualOutput || "No output"}
+                        </span>
+                      </div>
+                      {result.error && (
+                        <div className="text-red-400 flex items-start">
+                          <AlertCircle className="w-4 h-4 mr-1 mt-0.5 flex-shrink-0" />
+                          <span>Error: {result.error}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
         </div>
 
         {testResults.executionError && (
@@ -192,7 +192,7 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
           )}
         </div>
 
-        {hasError && (
+        {testResults?.executionError && (
           <button
             onClick={handleExplainClick}
             className="bg-blue-600 hover:bg-blue-700 text-xs px-3 py-1 rounded transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"

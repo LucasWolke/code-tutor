@@ -1,3 +1,11 @@
+export interface EditorTheme {
+    id: string;
+    name: string;
+    description?: string;
+    isDefault?: boolean;
+    color: string;
+}
+
 export interface ExecutionResult {
     output: string;
     success: boolean;
@@ -8,18 +16,14 @@ export interface ExecutionResult {
 }
 
 export interface TestCase {
-    inputs: any;
-    expectedOutput: any;
-    description?: string;
+    args: string[];
+    expected: string;
 }
 
 export interface MethodSignature {
     name: string;
     returnType: string;
-    parameters: {
-        name: string;
-        type: string;
-    }[];
+    parameters: { name: string; type: string }[];
 }
 
 export interface TestResult {

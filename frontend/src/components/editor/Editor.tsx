@@ -73,7 +73,6 @@ export function JavaEditor() {
   const {
     code,
     setEditorInstance,
-    executeCode,
     isExecuting,
     terminalOutput,
     disconnectLsp,
@@ -137,7 +136,6 @@ export function JavaEditor() {
         </div>
 
         <div className="flex items-center">
-          {/* Editor history controls */}
           <div className="flex mr-3 border-r border-gray-700 pr-3">
             <button
               onClick={undo}
@@ -156,7 +154,6 @@ export function JavaEditor() {
               <Redo2 className="w-4 h-4" />
             </button>
           </div>
-          {/* Code formatting */}
           <button
             onClick={formatCode}
             className="w-8 h-8 flex items-center justify-center mr-3 text-gray-300 hover:text-white hover:bg-gray-700 rounded transition-colors"
@@ -165,7 +162,6 @@ export function JavaEditor() {
           >
             <FileText className="w-4 h-4" />
           </button>{" "}
-          {/* Code actions */}
           <div className="flex space-x-2">
             <button
               onClick={handleResetClick}
@@ -179,30 +175,6 @@ export function JavaEditor() {
 
             <button
               onClick={runTests}
-              disabled={isRunningTests || isExecuting}
-              className={`bg-orange-600 hover:bg-orange-700 text-white h-8 px-3 rounded flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-orange-400 focus:ring-opacity-50 ${
-                isRunningTests || isExecuting
-                  ? "opacity-70 cursor-not-allowed"
-                  : "cursor-pointer"
-              }`}
-              title="Run Tests"
-              aria-label={isRunningTests ? "Running tests..." : "Run Tests"}
-            >
-              {isRunningTests ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  <span className="text-sm">Testing</span>
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  <span className="text-sm">Test</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={executeCode}
               disabled={isExecuting}
               className={`bg-green-600 hover:bg-green-700 text-white h-8 px-4 rounded flex items-center transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-50 ${
                 isExecuting ? "opacity-70 cursor-not-allowed" : "cursor-pointer"

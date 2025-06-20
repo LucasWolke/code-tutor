@@ -26,6 +26,7 @@ export interface ChatRequest {
     modelId?: string; // Optional model ID to use for generation
     testResults?: TestRunResult;
     additionalResources?: string[]; // Optional additional resources for context
+    strict: boolean; // Whether to check response consistency
 }
 
 /**

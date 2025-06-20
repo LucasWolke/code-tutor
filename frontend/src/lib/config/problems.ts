@@ -1,4 +1,5 @@
-import { Problem, ProblemDifficulty } from "../stores/problemStore";
+import { Problem, ProblemDifficulty } from "@/types/problem";
+
 
 export const PROBLEMS: Problem[] = [
     // EASY PROBLEM
@@ -47,27 +48,31 @@ Output: ['o','l','l','e','h']
     return s;
 }`,
         methodSignature: {
-            name: "reverseString",
-            returnType: "char[]",
-            parameters: [
-                { name: "s", type: "char[]" }
+            "name": "reverseString",
+            "returnType": "char[]",
+            "parameters": [
+                { "name": "s", "type": "char[]" }
             ]
         },
+
         testCases: [
             {
-                inputs: [['h', 'e', 'l', 'l', 'o']],
-                expectedOutput: ['o', 'l', 'l', 'e', 'h'],
-                description: "Reverse the string 'hello'"
+                "args": [
+                    "new char[]{'h','e','l','l','o'}"
+                ],
+                "expected": "new char[]{'o','l','l','e','h'}"
             },
             {
-                inputs: [['H', 'a', 'n', 'n', 'a', 'h']],
-                expectedOutput: ['h', 'a', 'n', 'n', 'a', 'H'],
-                description: "Reverse the string 'Hannah'"
+                "args": [
+                    "new char[]{'H','a','n','n','a','h'}"
+                ],
+                "expected": "new char[]{'h','a','n','n','a','H'}"
             },
             {
-                inputs: [['a']],
-                expectedOutput: ['a'],
-                description: "Reverse single character"
+                "args": [
+                    "new char[]{'a'}"
+                ],
+                "expected": "new char[]{'a'}"
             }
         ],
         additionalResources: [
@@ -104,36 +109,39 @@ Output: true
 - s contains only '(', ')', '{', '}', '[' and ']'.
 `,
         boilerplateCode: `public boolean isValid(String s) {
-    // TODO: use stack to match brackets
-    return false;
+    Deque<Character> stack = new ArrayDeque<>();
+    for (char c : s.toCharArray()) {
+        switch (c) {
+            case '(': stack.push(')'); break;
+            case '[': stack.push(']'); break;
+            case '{': stack.push('}'); break;
+            default:
+                if (stack.isEmpty() || stack.pop() != c) {
+                    return false;
+                }
+        }
+    }
+    return stack.isEmpty();
 }`,
         methodSignature: {
-            name: "isValid",
-            returnType: "boolean",
-            parameters: [
-                { name: "s", type: "String" }
+            "name": "isValid",
+            "returnType": "boolean",
+            "parameters": [
+                { "name": "s", "type": "String" }
             ]
         },
         testCases: [
             {
-                inputs: ["()[]{}"],
-                expectedOutput: true,
-                description: "Valid parentheses mix"
+                "args": [
+                    "\"()\""
+                ],
+                "expected": "true"
             },
             {
-                inputs: ["(]"],
-                expectedOutput: false,
-                description: "Invalid parentheses"
-            },
-            {
-                inputs: ["([)]"],
-                expectedOutput: false,
-                description: "Incorrectly nested parentheses"
-            },
-            {
-                inputs: ["{[]}"],
-                expectedOutput: true,
-                description: "Properly nested brackets"
+                "args": [
+                    "\"()}\""
+                ],
+                "expected": "false"
             }
         ]
     },
@@ -166,28 +174,63 @@ Output: 5
 - All words have the same length ≤ 10.
 `,
         boilerplateCode: `public int ladderLength(String beginWord, String endWord, List<String> wordList) {
-    // TODO: BFS or bidirectional BFS
+    Set<String> dict = new HashSet<>(wordList);
+    if (!dict.contains(endWord)) return 0;
+    Queue<String> q = new ArrayDeque<>();
+    q.add(beginWord);
+    Set<String> seen = new HashSet<>();
+    seen.add(beginWord);
+    int level = 1;
+
+    while (!q.isEmpty()) {
+        int sz = q.size();
+        for (int i = 0; i < sz; i++) {
+            String word = q.poll();
+            if (word.equals(endWord)) return level;
+            char[] chars = word.toCharArray();
+            for (int pos = 0; pos < chars.length; pos++) {
+                char orig = chars[pos];
+                for (char c = 'a'; c <= 'z'; c++) {
+                    if (c == orig) continue;
+                    chars[pos] = c;
+                    String next = new String(chars);
+                    if (dict.contains(next) && !seen.contains(next)) {
+                        seen.add(next);
+                        q.add(next);
+                    }
+                }
+                chars[pos] = orig;
+            }
+        }
+        level++;
+    }
     return 0;
 }`,
         methodSignature: {
-            name: "ladderLength",
-            returnType: "int",
-            parameters: [
-                { name: "beginWord", type: "String" },
-                { name: "endWord", type: "String" },
-                { name: "wordList", type: "List<String>" }
+            "name": "ladderLength",
+            "returnType": "int",
+            "parameters": [
+                { "name": "beginWord", "type": "String" },
+                { "name": "endWord", "type": "String" },
+                { "name": "wordList", "type": "List<String>" }
             ]
         },
         testCases: [
             {
-                inputs: ["hit", "cog", ["hot", "dot", "dog", "lot", "log", "cog"]],
-                expectedOutput: 5,
-                description: "Standard word ladder case"
+                "args": [
+                    "\"hit\"",
+                    "\"cog\"",
+                    "Arrays.asList(\"hot\",\"dot\",\"dog\",\"lot\",\"log\",\"cog\")"
+                ],
+                "expected": "5"
             },
             {
-                inputs: ["hit", "cog", ["hot", "dot", "dog", "lot", "log"]],
-                expectedOutput: 0,
-                description: "No path to target word"
+                "args": [
+                    "\"hit\"",
+                    "\"cog\"",
+                    "Arrays.asList(\"hot\",\"dot\",\"dog\",\"lot\",\"log\")"
+                ],
+                "expected": "0"
             }
         ]
     }
