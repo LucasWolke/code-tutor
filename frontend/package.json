@@ -42,6 +42,7 @@
     "@shikijs/monaco": "^3.2.1",
     "@tailwindcss/postcss": "^4.1.7",
     "@tailwindcss/typography": "^0.5.16",
+    "@types/node": "^24.0.3",
     "@types/react": "^19",
     "shiki": "^3.2.1",
     "tailwindcss": "^4",

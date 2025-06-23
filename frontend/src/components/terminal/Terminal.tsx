@@ -50,9 +50,7 @@ export const Terminal = ({ output, isLoading }: TerminalProps) => {
 
   // Handle explain button click
   const handleExplainClick = () => {
-    if (errorMessage) {
-      sendErrorMessage();
-    }
+    sendErrorMessage();
   };
   // Parse and format the output, especially for error messages
   const renderOutput = () => {

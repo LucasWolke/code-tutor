@@ -75,11 +75,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
     // Message handling
     sendErrorMessage: async () => {
+        console.log("Sending error message...");
         const content = "Help me fix this error in my code. I dont need any other advice for this next message, just how to solve this error. ";
 
         // Add user message for the error request
         const userErrorMessage = new HumanMessage({ content }) as EnhancedChatMessage;
-        get().addMessage(userErrorMessage);
 
         // Add loading placeholder message
         const loadingMessage = new AIMessage({ content: "Thinking..." }) as EnhancedChatMessage;
@@ -90,7 +90,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         try {
             // Get current chat history including the new user error message
             const chatHistory = get().messages.filter(msg => msg !== loadingMessage); // Exclude loading message itself from history
-
+            chatHistory.push(userErrorMessage); // Include the error message in history
             // Generate AI response
             const response = await generateResponse(chatHistory, { // Use aiService instance
                 helpLevel: HelpLevel.Contextual,

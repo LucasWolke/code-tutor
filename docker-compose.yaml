@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  java-lsp-server:
+    build:
+      context: ./backend/lsp/java-lsp-server
+      dockerfile: Dockerfile
+    ports:
+      - "30003:30003"
+    volumes:
+      - ./backend/lsp/workspace:/app/workspace
+    environment:
+      - JDTLS_BASE_PATH=/app
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    container_name: piston_api
+    restart: always
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - ./data/piston/packages:/piston/packages
+    tmpfs:
+      - /tmp:exec

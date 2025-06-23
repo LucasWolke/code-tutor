@@ -5,7 +5,7 @@ import { toSocket, WebSocketMessageReader, WebSocketMessageWriter } from "vscode
 
 // Create the WebSocket URL based on the protocol and port
 function createUrl(): string {
-    return normalizeUrl("ws://localhost:30003/jdtls");
+    return normalizeUrl(process.env.LSP_URL || "ws://localhost:30003/jdtls");
 }
 
 // Create the language client with the given transports
